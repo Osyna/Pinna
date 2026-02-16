@@ -1,0 +1,10 @@
+// ─── SCSS Variables (injected globally via vite additionalData) ───
+// These mirror the CSS custom properties for use in SCSS-specific contexts
+// (rgba() with variables, conditionals, etc). The CSS vars remain the
+// source of truth for runtime theming.
+
+$accent: #8B5CF6;
+$accent-hover: #A78BFA;
+$accent-light: rgba(139, 92, 246, 0.15);
+$accent-glow: rgba(139, 92, 246, 0.25);
+$accent-muted: rgba(139, 92, 246, 0.2);

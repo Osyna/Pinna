@@ -1,0 +1,38 @@
+{
+  "name": "mappsly",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "node --env-file=.env server/index.js",
+    "dev:all": "concurrently -n fe,be -c cyan,green \"vite\" \"node --watch --env-file=.env server/index.js\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ionic/vue": "^8.7.17",
+    "@prisma/client": "^6.19.2",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "fuse.js": "^7.1.0",
+    "helmet": "^8.1.0",
+    "ionicons": "^8.0.13",
+    "jsonwebtoken": "^9.0.3",
+    "maplibre-gl": "^5.18.0",
+    "open-graph-scraper": "^6.11.0",
+    "pinia": "^3.0.4",
+    "sharp": "^0.34.5",
+    "vue": "^3.5.25",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.2",
+    "concurrently": "^9.2.1",
+    "prisma": "^6.19.2",
+    "sass": "^1.97.3",
+    "vite": "^7.3.1"
+  }
+}

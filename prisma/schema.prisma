@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String       @id @default(uuid())
+  email            String       @unique
+  password         String
+  name             String?
+  handle           String?      @unique
+  bio              String       @default("")
+  country          String       @default("")
+  favoriteCuisines String[]     @default([])
+  favoritePlaceIds String[]     @default([])
+  avatarData       Bytes?
+  avatarMime       String?
+  theme            String       @default("dark")
+  createdAt        DateTime     @default(now())
+  places           Place[]
+  categories       Category[]
+  sentRequests     Friendship[] @relation("SentRequests")
+  receivedRequests Friendship[] @relation("ReceivedRequests")
+}
+
+model Friendship {
+  id         String   @id @default(uuid())
+  status     String   @default("pending")
+  senderId   String
+  sender     User     @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([senderId, status])
+}
+
+model Place {
+  id        String   @id @default(uuid())
+  name      String
+  lat       Float
+  lng       Float
+  address   String   @default("")
+  category  String   @default("other")
+  notes     String   @default("")
+  rating    Int      @default(0)
+  cuisine   String   @default("None")
+  website   String   @default("")
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id     String @id @default(uuid())
+  name   String
+  color  String
+  icon   String
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

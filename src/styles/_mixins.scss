@@ -1,0 +1,47 @@
+@use "variables" as *;
+
+// ─── Reusable SCSS Mixins ───
+
+@mixin input-focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+@mixin chip-active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: rgba($accent, 0.3);
+}
+
+@mixin avatar-gradient {
+  background: linear-gradient(135deg, $accent, $accent-hover);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin title-gradient {
+  background: linear-gradient(135deg, $accent, #C4B5FD);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@mixin btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius);
+  font-weight: 600;
+
+  &:hover {
+    background: var(--accent-hover);
+    box-shadow: var(--shadow-glow);
+  }
+}
