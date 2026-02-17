@@ -136,6 +136,7 @@
 [data-theme="light"] ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.1);
 }
+
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.18);
 }
@@ -145,32 +146,42 @@
   color: #1a1a2e !important;
   border-color: rgba(0, 0, 0, 0.1) !important;
 }
+
 [data-theme="light"] .maplibregl-ctrl-attrib {
   background: rgba(255, 255, 255, 0.85) !important;
   color: #8888a0 !important;
 }
+
 [data-theme="light"] .maplibregl-popup-content {
   background: rgba(255, 255, 255, 0.95) !important;
   color: #1a1a2e !important;
   border-color: rgba(0, 0, 0, 0.08) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
 }
+
 [data-theme="light"] .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
   border-top-color: rgba(255, 255, 255, 0.95) !important;
 }
+
 [data-theme="light"] .maplibregl-popup-anchor-top .maplibregl-popup-tip {
   border-bottom-color: rgba(255, 255, 255, 0.95) !important;
 }
+
 [data-theme="light"] .maplibregl-popup-anchor-left .maplibregl-popup-tip {
   border-right-color: rgba(255, 255, 255, 0.95) !important;
 }
+
 [data-theme="light"] .maplibregl-popup-anchor-right .maplibregl-popup-tip {
   border-left-color: rgba(255, 255, 255, 0.95) !important;
 }
+
 [data-theme="light"] .maplibregl-popup-close-button {
   color: rgba(0, 0, 0, 0.4) !important;
 }
-[data-theme="light"] .ambient-orb { opacity: 0.15; }
+
+[data-theme="light"] .ambient-orb {
+  opacity: 0.15;
+}
 
 /* ─── Reset ─── */
 * {
@@ -180,7 +191,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body, #app {
+html,
+body,
+#app {
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -200,7 +213,10 @@ body {
 }
 
 /* Allow text selection in inputs */
-input, textarea, select, [contenteditable] {
+input,
+textarea,
+select,
+[contenteditable] {
   user-select: auto;
   -webkit-user-select: auto;
 }
@@ -219,9 +235,12 @@ button:active {
   transform: scale(0.96);
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
-  font-size: 16px; /* Prevents iOS zoom on focus */
+  font-size: 16px;
+  /* Prevents iOS zoom on focus */
   outline: none;
   border: none;
   transition: all var(--transition);
@@ -331,7 +350,7 @@ ion-segment-button {
   background: var(--bg-hover) !important;
 }
 
-.maplibregl-ctrl-group button + button {
+.maplibregl-ctrl-group button+button {
   border-top: none !important;
 }
 
@@ -364,12 +383,15 @@ ion-segment-button {
 .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
   border-top-color: var(--bg-glass) !important;
 }
+
 .maplibregl-popup-anchor-top .maplibregl-popup-tip {
   border-bottom-color: var(--bg-glass) !important;
 }
+
 .maplibregl-popup-anchor-left .maplibregl-popup-tip {
   border-right-color: var(--bg-glass) !important;
 }
+
 .maplibregl-popup-anchor-right .maplibregl-popup-tip {
   border-left-color: var(--bg-glass) !important;
 }
@@ -388,17 +410,20 @@ ion-segment-button {
   flex-direction: column;
   gap: 6px;
 }
+
 .pp-header {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .pp-cat-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
+
 .pp-nearby-dot {
   width: 8px;
   height: 8px;
@@ -406,23 +431,27 @@ ion-segment-button {
   background: #f59e0b;
   flex-shrink: 0;
 }
+
 .pp-name {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.3;
 }
+
 .pp-meta {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
+
 .pp-cuisine {
   font-size: 11px;
   font-weight: 600;
   color: var(--accent);
 }
+
 .pp-cat {
   font-size: 10px;
   font-weight: 600;
@@ -430,26 +459,31 @@ ion-segment-button {
   border-radius: 6px;
   line-height: 1.4;
 }
+
 .pp-type {
   font-size: 11px;
   color: var(--text-secondary);
   text-transform: capitalize;
 }
+
 .pp-stars {
   font-size: 12px;
   color: #f59e0b;
   letter-spacing: 1px;
 }
+
 .pp-addr {
   font-size: 11px;
   color: var(--text-muted);
   line-height: 1.4;
 }
+
 .pp-tags {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
 }
+
 .pp-tag {
   font-size: 10px;
   padding: 2px 6px;
@@ -457,6 +491,7 @@ ion-segment-button {
   color: var(--text-secondary);
   border-radius: 4px;
 }
+
 .pp-save-btn {
   display: flex;
   align-items: center;
@@ -474,6 +509,7 @@ ion-segment-button {
   box-shadow: 0 2px 8px var(--glow-accent);
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
+
 .pp-save-btn:active {
   transform: scale(0.96);
   opacity: 0.9;
@@ -534,28 +570,65 @@ ion-segment-button {
 }
 
 @keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -30px) scale(1.05);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
 }
 
 /* ─── Staggered entry animation ─── */
-.stagger-enter > * {
+.stagger-enter>* {
   opacity: 0;
   transform: translateY(16px);
   animation: stagger-in 0.4s var(--ease-out-expo) forwards;
 }
-.stagger-enter > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-enter > *:nth-child(2) { animation-delay: 50ms; }
-.stagger-enter > *:nth-child(3) { animation-delay: 100ms; }
-.stagger-enter > *:nth-child(4) { animation-delay: 150ms; }
-.stagger-enter > *:nth-child(5) { animation-delay: 200ms; }
-.stagger-enter > *:nth-child(6) { animation-delay: 250ms; }
-.stagger-enter > *:nth-child(7) { animation-delay: 300ms; }
-.stagger-enter > *:nth-child(8) { animation-delay: 350ms; }
+
+.stagger-enter>*:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.stagger-enter>*:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.stagger-enter>*:nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.stagger-enter>*:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.stagger-enter>*:nth-child(5) {
+  animation-delay: 200ms;
+}
+
+.stagger-enter>*:nth-child(6) {
+  animation-delay: 250ms;
+}
+
+.stagger-enter>*:nth-child(7) {
+  animation-delay: 300ms;
+}
+
+.stagger-enter>*:nth-child(8) {
+  animation-delay: 350ms;
+}
 
 @keyframes stagger-in {
-  to { opacity: 1; transform: translateY(0); }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ─── Heading font ─── */
@@ -565,11 +638,280 @@ ion-segment-button {
   letter-spacing: -0.03em;
 }
 
+/* ─── Gemini animations ─── */
+@keyframes gemini-pulse {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px var(--glow-accent));
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 30px var(--glow-accent));
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px var(--glow-accent));
+    opacity: 0.8;
+  }
+}
+
+@keyframes gemini-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gemini-sparkle {
+
+  0%,
+  100% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1) rotate(180deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes expansion-grow {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(500);
+    opacity: 1;
+  }
+}
+
+@keyframes gemini-dash {
+  0% {
+    stroke-dashoffset: 1000;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes splash-fade-out {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(60px) saturate(180%);
+    -webkit-backdrop-filter: blur(60px) saturate(180%);
+  }
+
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px) saturate(100%);
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    visibility: hidden;
+  }
+}
+
+@keyframes content-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Skeleton build animations ─── */
+@keyframes skeleton-build {
+  0% {
+    transform: translateY(20px) scaleX(0.95);
+    filter: blur(4px);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0) scaleX(1);
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drop-from-top {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-from-bottom {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-from-right {
+  0% {
+    transform: translateX(100vw);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-from-left {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes line-build {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+.pre-reveal {
+
+  .search-bar-wrapper,
+  .bottom-tabs,
+  .right-controls,
+  .legend-container,
+  .rc-btn,
+  .tab-btn {
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+}
+
+.build-anim {
+  animation: skeleton-build 1.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  visibility: visible !important;
+
+  &--delay-1 {
+    animation-delay: 0.1s;
+  }
+
+  &--delay-2 {
+    animation-delay: 0.3s;
+  }
+
+  &--delay-3 {
+    animation-delay: 0.5s;
+  }
+
+  &--delay-4 {
+    animation-delay: 0.7s;
+  }
+
+  &--drop {
+    animation-name: drop-from-top;
+  }
+
+  &--slide {
+    animation-name: slide-from-bottom;
+  }
+
+  &--slide-right {
+    animation-name: slide-from-right;
+  }
+
+  &--slide-left {
+    animation-name: slide-from-left;
+  }
+}
+
+.line-anim {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background: var(--glass-border);
+    animation: line-build 1s var(--ease-out-expo) forwards;
+  }
+}
+
 /* ─── Reduced motion ─── */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
-  .ambient-orb { display: none; }
+
+  .ambient-orb,
+  .gemini-glow,
+  .sparkle {
+    display: none;
+  }
 }

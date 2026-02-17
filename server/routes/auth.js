@@ -41,6 +41,7 @@ function validateHandle(h) {
 
 export default function authRoutes(prisma) {
   const router = Router()
+  console.log('Auth routes initialized')
 
   router.post('/register', authLimiter, async (req, res) => {
     try {

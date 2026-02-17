@@ -25,16 +25,19 @@ fi
 echo "Syncing database schema..."
 npx prisma db push --skip-generate
 
-SESSION="mappsly"
+SESSION="pinna"
 
 # Kill existing session if any
 tmux kill-session -t "$SESSION" 2>/dev/null || true
 
-# Create session with backend pane
+# Create session with Backend in the first pane (Top)
 tmux new-session -d -s "$SESSION" -n dev "npm run dev:server"
 
-# Split horizontally and run frontend
-tmux split-window -h -t "$SESSION" "npm run dev"
+# Split vertically and run Frontend in the second pane (Bottom)
+tmux split-window -v -t "$SESSION:dev" "npm run dev"
+
+# Kill session when detached (ensures processes are stopped on close)
+tmux set-hook -t "$SESSION" client-detached "kill-session"
 
 # Attach
 exec tmux attach -t "$SESSION"

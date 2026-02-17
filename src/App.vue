@@ -11,6 +11,7 @@ import AddPlaceModal from './components/AddPlaceModal.vue'
 import PlaceDetail from './components/PlaceDetail.vue'
 import AuthModal from './components/AuthModal.vue'
 import AppToast from './components/AppToast.vue'
+import SplashScreen from './components/SplashScreen.vue'
 import { useAuthStore } from './stores/auth'
 import { usePlacesStore } from './stores/places'
 import { useFriendsStore } from './stores/friends'
@@ -23,6 +24,10 @@ const activeTab = ref('map')
 const detailPlaceId = ref(null)
 
 const isOffline = ref(!navigator.onLine)
+const showSplash = ref(true)
+const splashFinished = ref(false)
+
+const appVisible = computed(() => !showSplash.value && splashFinished.value)
 
 const tabIndicatorStyle = computed(() => {
   const tabIndices = { map: 0, search: 1, places: 2, friends: 3, profile: 4 }
@@ -127,51 +132,70 @@ function switchTab(tab) {
   if (tab === 'map') detailPlaceId.value = null
   activeTab.value = tab
 }
+
+function onSplashFinish() {
+  splashFinished.value = true
+  // Smallest possible tick to ensure splashFinished state propagates before showSplash fades
+  setTimeout(() => {
+    showSplash.value = false
+  }, 10)
+}
 </script>
 
 <template>
   <ion-app>
-    <div v-if="authStore.loading" class="auth-loading">
-      <p class="auth-loading-text">Mappsly</p>
-    </div>
-    <AuthModal v-else-if="!authStore.isAuthenticated" />
-    <div v-else class="app-root">
-      <!-- Map (always rendered, hidden when other tabs active) -->
+    <SplashScreen 
+      v-if="showSplash" 
+      :is-visible="showSplash"
+      :loading="authStore.loading"
+      @finish="onSplashFinish" 
+    />
+    
+    <div class="app-root" :class="{ 'pre-reveal': !splashFinished }">
+      <!-- Map (Always rendered, but UI elements inside animate) -->
       <div v-show="activeTab === 'map'" class="map-layer">
         <MapView
           ref="mapRef"
+          :splash-finished="splashFinished"
           @show-detail="onShowDetail"
           @add-place="onAddPlace"
         />
         <SearchBar
+          v-if="!showSplash"
           :map-ref="mapRef"
+          :class="{ 'build-anim build-anim--drop build-anim--delay-1': splashFinished }"
           @select="onSearchSelect"
         />
       </div>
 
-      <!-- Search view -->
-      <SearchView
-        v-if="activeTab === 'search'"
-        @show-detail="onShowDetail"
-        @select="onSearchSelect"
-        @add-place="onAddPlace"
-      />
+      <div v-if="!showSplash" class="main-content-layer">
+        <AuthModal v-if="!authStore.isAuthenticated && !authStore.loading" />
+        <div v-else-if="authStore.isAuthenticated" class="tab-content-wrapper">
+          <!-- Search view -->
+          <SearchView
+            v-if="activeTab === 'search'"
+            @show-detail="onShowDetail"
+            @select="onSearchSelect"
+            @add-place="onAddPlace"
+          />
 
-      <!-- Places view -->
-      <PlacesView
-        v-if="activeTab === 'places'"
-        @show-detail="onShowDetail"
-        @add-place="onAddPlace"
-      />
+          <!-- Places view -->
+          <PlacesView
+            v-if="activeTab === 'places'"
+            @show-detail="onShowDetail"
+            @add-place="onAddPlace"
+          />
 
-      <!-- Friends view -->
-      <FriendsView
-        v-if="activeTab === 'friends'"
-        @view-friend-map="onViewFriendMap"
-      />
+          <!-- Friends view -->
+          <FriendsView
+            v-if="activeTab === 'friends'"
+            @view-friend-map="onViewFriendMap"
+          />
 
-      <!-- Profile view -->
-      <ProfileView v-if="activeTab === 'profile'" />
+          <!-- Profile view -->
+          <ProfileView v-if="activeTab === 'profile'" />
+        </div>
+      </div>
 
       <!-- Ambient glow (non-map tabs only) -->
       <div v-if="activeTab !== 'map'" class="ambient-glow">
@@ -188,28 +212,28 @@ function switchTab(tab) {
       </transition>
 
       <!-- Bottom tab bar -->
-      <div class="bottom-tabs">
+      <div v-if="!showSplash" class="bottom-tabs line-anim">
         <div class="tab-indicator" :style="tabIndicatorStyle"></div>
-        <button :class="['tab-btn', { active: activeTab === 'map' && !friendsStore.viewingFriendId }]" @click="switchTab('map')">
+        <button :class="['tab-btn', { active: activeTab === 'map' && !friendsStore.viewingFriendId }, { 'build-anim build-anim--slide build-anim--delay-1': splashFinished }]" @click="switchTab('map')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
             <line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
           </svg>
           <span>Map</span>
         </button>
-        <button :class="['tab-btn', { active: activeTab === 'search' }]" @click="switchTab('search')">
+        <button :class="['tab-btn', { active: activeTab === 'search' }, { 'build-anim build-anim--slide build-anim--delay-2': splashFinished }]" @click="switchTab('search')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <span>Search</span>
         </button>
-        <button :class="['tab-btn', { active: activeTab === 'places' }]" @click="switchTab('places')">
+        <button :class="['tab-btn', { active: activeTab === 'places' }, { 'build-anim build-anim--slide build-anim--delay-3': splashFinished }]" @click="switchTab('places')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
           </svg>
           <span>Places</span>
         </button>
-        <button :class="['tab-btn', { active: activeTab === 'friends' || friendsStore.viewingFriendId }]" @click="switchTab('friends')" style="position: relative">
+        <button :class="['tab-btn', { active: activeTab === 'friends' || friendsStore.viewingFriendId }, { 'build-anim build-anim--slide build-anim--delay-4': splashFinished }]" @click="switchTab('friends')" style="position: relative">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
@@ -219,7 +243,7 @@ function switchTab(tab) {
           <span>Friends</span>
           <span v-if="friendsStore.pendingCount > 0" class="tab-badge">{{ friendsStore.pendingCount }}</span>
         </button>
-        <button :class="['tab-btn', { active: activeTab === 'profile' }]" @click="switchTab('profile')">
+        <button :class="['tab-btn', { active: activeTab === 'profile' }, { 'build-anim build-anim--slide build-anim--delay-4': splashFinished }]" @click="switchTab('profile')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>
@@ -252,7 +276,7 @@ function switchTab(tab) {
       />
     </div>
     <AppToast />
-  </ion-app>
+</ion-app>
 </template>
 
 <style scoped lang="scss">
@@ -359,4 +383,5 @@ function switchTab(tab) {
     border: 1px solid var(--glass-border); border-bottom: none;
   }
 }
+
 </style>

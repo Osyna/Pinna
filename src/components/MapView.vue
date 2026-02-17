@@ -14,6 +14,10 @@ import { useTheme } from '../composables/useTheme'
 import { hapticTap } from '../composables/useHaptics'
 import { ACCENT } from '../theme'
 
+const props = defineProps({
+  splashFinished: Boolean
+})
+
 const emit = defineEmits(['place-select', 'show-detail', 'add-place', 'zoom-change'])
 const store = usePlacesStore()
 const friendsStore = useFriendsStore()
@@ -37,6 +41,16 @@ const friendAvatarError = ref(false)
 const currentZoom = ref(2)
 const currentLayer = ref('dark')
 const showLegendPanel = ref(false)
+const hasBuiltLegend = ref(false)
+
+watch(() => props.splashFinished, (done) => {
+  if (done) {
+    // Mark as built after the 1.5s animation + delay
+    setTimeout(() => {
+      hasBuiltLegend.value = true
+    }, 2500)
+  }
+})
 
 /* ─── Long-press to add place ─── */
 let longPressTimer = null
@@ -993,7 +1007,7 @@ watch(theme, (newTheme) => {
     </transition>
 
     <!-- Bottom-left controls: layer switcher -->
-    <div class="bottom-controls">
+    <div class="bottom-controls" :class="{ 'build-anim build-anim--slide build-anim--delay-2': splashFinished }">
       <div class="layer-sw">
         <button :class="['layer-btn', { active: currentLayer === 'dark' || currentLayer === 'light' }]"
           @click="switchTileLayer(theme === 'light' ? 'light' : 'dark')">
@@ -1030,7 +1044,7 @@ watch(theme, (newTheme) => {
     </transition>
 
     <!-- Right-side controls — vertically centered -->
-    <div class="right-controls">
+    <div class="right-controls" :class="{ 'build-anim build-anim--slide-right build-anim--delay-3': splashFinished }">
       <button :class="['rc-btn', { active: locating || userLat != null }]" @click="locateMe" title="My location">
         <svg v-if="!locating" width="18" height="18" viewBox="0 0 24 24" fill="none"
           :stroke="userLat != null ? 'var(--accent)' : 'currentColor'" stroke-width="2" stroke-linecap="round">
@@ -1133,26 +1147,42 @@ watch(theme, (newTheme) => {
       </div>
     </div>
 
-    <!-- Category legend dots -->
-    <div class="legend-dots" v-if="store.categories.length > 0 && !showLegendPanel" @click="showLegendPanel = true">
-      <div
-        v-for="cat in store.categories" :key="cat.id"
-        class="legend-dot-item"
-        :style="{ background: cat.color }"
-        :title="cat.name"
-      ></div>
-    </div>
-
-    <!-- Category legend panel -->
-    <div v-if="showLegendPanel" class="legend-panel-overlay" @click="showLegendPanel = false">
-      <div class="legend-panel" @click.stop>
-        <div v-for="cat in store.categories" :key="cat.id" class="legend-item">
-          <span class="legend-item-dot" :style="{ background: cat.color }"></span>
-          <span class="legend-item-name">{{ cat.name }}</span>
-          <span class="legend-item-count">{{ store.categoryCounts[cat.id] || 0 }}</span>
+    <!-- Category legend -->
+    <div class="legend-section">
+      <div 
+        v-if="store.categories.length > 0" 
+        class="legend-container" 
+        :class="{ 
+          'is-expanded': showLegendPanel, 
+          'build-anim build-anim--slide-left build-anim--delay-4': splashFinished && !hasBuiltLegend 
+        }" 
+        :style="{ '--total': store.categories.length }"
+        @click="showLegendPanel = !showLegendPanel"
+      >
+        <div 
+          v-for="(cat, index) in store.categories" 
+          :key="cat.id" 
+          class="legend-row"
+          :style="{ '--index': index }"
+        >
+          <div
+            class="legend-dot-item"
+            :style="{ background: cat.color }"
+            :title="cat.name"
+          ></div>
+          
+          <transition name="legend-text">
+            <div v-if="showLegendPanel" class="legend-text-group" @click.stop>
+              <span class="legend-item-name">{{ cat.name }}</span>
+              <span class="legend-item-count">{{ store.categoryCounts[cat.id] || 0 }}</span>
+            </div>
+          </transition>
         </div>
       </div>
     </div>
+
+    <!-- Hidden overlay for closing when panel is open -->
+    <div v-if="showLegendPanel" class="legend-panel-overlay" @click="showLegendPanel = false"></div>
 
   </div>
 </template>
@@ -1368,7 +1398,7 @@ watch(theme, (newTheme) => {
   animation: ctxIn 0.15s ease;
 }
 
-@keyframes ctxIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes ctxIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 .friend-picker-title {
   padding: 10px 14px;
@@ -1463,17 +1493,26 @@ watch(theme, (newTheme) => {
   filter: drop-shadow(0 2px 6px rgba($accent, 0.5));
 }
 
-/* Category legend dots (compact column) */
-.legend-dots {
+/* Legend area container */
+.legend-section {
   position: absolute;
-  left: 10px;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
+  height: auto;
+  z-index: 1100; /* Stays above overlay */
+  pointer-events: none; /* Let clicks pass to dots/panel */
+}
+
+/* Unified Legend Container (Morphing) */
+.legend-container {
+  position: relative;
+  left: 10px;
+  top: 0;
+  transform-origin: left center;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 5px;
   background: var(--bg-glass);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
@@ -1481,7 +1520,109 @@ watch(theme, (newTheme) => {
   border-radius: 14px;
   box-shadow: var(--shadow);
   cursor: pointer;
+  padding: 8px 5px;
+  width: 20px;
+  min-width: 20px;
+  gap: 6px; /* Collapsed gap */
+  transition: 
+    width 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    gap 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  pointer-events: auto;
+
+  /* Sequential closing: Wait for ALL text stagger to finish before resizing */
+  &:not(.is-expanded) {
+    transition-delay: calc(var(--total) * 0.05s + 0.25s);
+    gap: 6px;
+  }
+
+  /* Robust hidden state during splash */
+  :global(.pre-reveal) & {
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  &.is-expanded {
+    width: 160px; /* Reduced from 180px */
+    min-width: 160px;
+    gap: 6px;    /* Reduced from 10px */
+    padding: 8px; /* Balanced padding */
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    cursor: default;
+    transition-delay: 0s; /* Expand immediately */
+  }
 }
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* Reduced from 8px */
+  width: 100%;
+  min-height: 18px;
+}
+
+.legend-text-group {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 4px; /* Internal gap for name vs count */
+}
+
+/* Staggered sequential text transition */
+.legend-text-enter-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--index) * 0.05s);
+}
+
+.legend-text-leave-active {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Reverse stagger: bottom to top */
+  transition-delay: calc((var(--total) - 1 - var(--index)) * 0.05s);
+}
+
+.legend-text-enter-from,
+.legend-text-leave-to {
+  opacity: 0;
+  transform: translateX(-4px);
+}
+
+.legend-item-dot {
+  width: 8px; /* Slightly smaller dot */
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-item-name {
+  flex: 1;
+  font-size: 12px; /* Slightly smaller text */
+  font-weight: 500;
+  color: #1a1a2e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legend-item-count {
+  font-size: 10px; /* Slightly smaller count */
+  font-weight: 600;
+  color: #8b8ba7;
+}
+
+/* Transparent overlay catches clicks outside the legend */
+.legend-panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050; /* Above map, below legend-section */
+  background: transparent;
+}
+
 
 .legend-dot-item {
   width: 10px;
@@ -1492,65 +1633,7 @@ watch(theme, (newTheme) => {
   transition: transform 150ms ease;
 }
 
-.legend-dots:hover .legend-dot-item { transform: scale(1.15); }
-
-/* Legend panel */
-.legend-panel-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1002;
-}
-
-.legend-panel {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: auto;
-  min-width: 150px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  padding: 10px 0;
-  animation: legendFadeIn 0.2s ease;
-}
-
-@keyframes legendFadeIn {
-  from { opacity: 0; transform: translateY(-50%) translateX(-8px); }
-  to { opacity: 1; transform: translateY(-50%) translateX(0); }
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 16px;
-}
-
-.legend-item-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.legend-item-name {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 500;
-  color: #1a1a2e;
-  white-space: nowrap;
-}
-
-.legend-item-count {
-  font-size: 11px;
-  font-weight: 600;
-  color: #8b8ba7;
-  margin-left: 8px;
-}
+.legend-container:not(.is-expanded):hover .legend-dot-item { transform: scale(1.15); }
 
 /* Mobile — controls relative to shrunken map, no overlap with navbar */
 @media (max-width: 768px) {

@@ -1,19 +1,20 @@
-# Obsidian Glass Redesign for Mappsly
+# Pinna - "Obsidian Glass" Design System
+> Date: 2026-02-15
+> Status: APPROVED
 
-**Date:** 2026-02-15
-**Approach:** Hybrid - CSS token overhaul + targeted template updates
-**Accent Theme:** Coral (#FF7A5C)
-**Themes:** Dark (primary) + Light (updated)
+## 1. Brand Identity & Philosophy
+**Name:** Pinna
+**Core Philosophy:** "Darkness reveals light."
+**Aesthetic:** Ultra-premium, futuristic yet grounded, tactile, depth-focused.
+**Key Metaphor:** Obsidian stone viewed through smart glass. Use of deep blacks, glossy reflections, and vibrant neon accents that feel like light refraction.
 
-## Decisions
+## 2. Color Palette
+The palette is built on deep, rich darks and vibrant, glowing accents.
 
-- Accent color: Coral (#FF7A5C) replacing Indigo (#6366f1)
-- Both dark and light themes updated
-- Full overhaul: all components
-- Ambient glow orbs on non-map views only
-- Hybrid approach: CSS tokens + targeted template updates on high-impact areas
-
-## Color System
+### Primary (The Void)
+- `Obsidian Black`: `#0a0a0a` (Backgrounds, base layers)
+- `Charcoal Glass`: `#161616` (Cards, panels - 80% opacity)
+- `Onyx Surface`: `#202020` (Hover states, secondary surfaces)
 
 ### Dark Theme Tokens
 

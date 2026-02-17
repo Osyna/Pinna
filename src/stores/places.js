@@ -106,19 +106,19 @@ function mergeGeoJSONWithCSV(geojsonPlaces, csvRows) {
 }
 
 const DEFAULT_CATEGORIES = [
-  { id: 'favorite', name: 'Favorites', color: '#f59e0b', icon: 'star' },
-  { id: 'restaurant', name: 'Restaurant', color: '#ef4444', icon: 'utensils' },
-  { id: 'bar', name: 'Bar', color: '#a855f7', icon: 'glass' },
-  { id: 'cafe', name: 'Cafe', color: '#f97316', icon: 'coffee' },
-  { id: 'brunch', name: 'Brunch', color: '#ec4899', icon: 'brunch' },
-  { id: 'fast-food', name: 'Fast Food', color: '#eab308', icon: 'burger' },
-  { id: 'bakery', name: 'Bakery', color: '#d97706', icon: 'bread' },
-  { id: 'nightclub', name: 'Nightclub', color: '#7c3aed', icon: 'music' },
-  { id: 'shopping', name: 'Shopping', color: '#8b5cf6', icon: 'bag' },
-  { id: 'nature', name: 'Nature', color: '#22c55e', icon: 'tree' },
-  { id: 'culture', name: 'Culture', color: '#3b82f6', icon: 'museum' },
-  { id: 'hotel', name: 'Hotel', color: '#0ea5e9', icon: 'bed' },
-  { id: 'other', name: 'Other', color: '#14b8a6', icon: 'pin' },
+  { id: 'favorite', name: 'Favorites', color: '#FFD700', icon: 'star' },
+  { id: 'restaurant', name: 'Restaurant', color: '#FF3B30', icon: 'utensils' },
+  { id: 'bar', name: 'Bar', color: '#AF52DE', icon: 'glass' },
+  { id: 'cafe', name: 'Cafe', color: '#FF9500', icon: 'coffee' },
+  { id: 'brunch', name: 'Brunch', color: '#FF2D55', icon: 'brunch' },
+  { id: 'fast-food', name: 'Fast Food', color: '#FFCC00', icon: 'burger' },
+  { id: 'bakery', name: 'Bakery', color: '#A0522D', icon: 'bread' },
+  { id: 'nightclub', name: 'Nightclub', color: '#5856D6', icon: 'music' },
+  { id: 'shopping', name: 'Shopping', color: '#FF66CC', icon: 'bag' },
+  { id: 'nature', name: 'Nature', color: '#34C759', icon: 'tree' },
+  { id: 'culture', name: 'Culture', color: '#007AFF', icon: 'museum' },
+  { id: 'hotel', name: 'Hotel', color: '#30B0C7', icon: 'bed' },
+  { id: 'other', name: 'Other', color: '#8E8E93', icon: 'pin' },
 ]
 
 const CUISINE_TYPES = [
@@ -150,7 +150,7 @@ const CUISINE_TYPES = [
   'Other',
 ]
 
-export const usePlacesStore = defineStore('places', () => {
+export const usePlacesStore = defineStore("pinna-places", () => {
   const places = shallowRef([])
   const categories = ref([...DEFAULT_CATEGORIES])
   const loaded = ref(false)

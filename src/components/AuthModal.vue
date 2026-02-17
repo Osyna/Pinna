@@ -77,11 +77,12 @@ function toggle() {
   <div class="auth-overlay">
     <div class="auth-card">
       <div class="auth-header">
-        <h1 class="auth-logo">Mappsly</h1>
+        <h1 class="auth-logo">Pinna</h1>
         <p class="auth-subtitle">{{ mode === 'login' ? 'Welcome back' : 'Create your account' }}</p>
       </div>
 
       <form class="auth-form" @submit.prevent="submit">
+        <!-- Register Form -->
         <div v-if="mode === 'register'" class="field">
           <label for="name">Name</label>
           <input id="name" v-model="name" type="text" placeholder="Your name" autocomplete="name" @blur="onNameBlur" />

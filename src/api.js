@@ -1,26 +1,26 @@
 const API_BASE = '/api'
 
 function getToken() {
-  return localStorage.getItem('mappsly-token')
+  return localStorage.getItem('pinna-token')
 }
 
 function getRefreshToken() {
-  return localStorage.getItem('mappsly-refresh-token')
+  return localStorage.getItem('pinna-refresh-token')
 }
 
 export function setToken(token) {
   if (token) {
-    localStorage.setItem('mappsly-token', token)
+    localStorage.setItem('pinna-token', token)
   } else {
-    localStorage.removeItem('mappsly-token')
+    localStorage.removeItem('pinna-token')
   }
 }
 
 export function setRefreshToken(token) {
   if (token) {
-    localStorage.setItem('mappsly-refresh-token', token)
+    localStorage.setItem('pinna-refresh-token', token)
   } else {
-    localStorage.removeItem('mappsly-refresh-token')
+    localStorage.removeItem('pinna-refresh-token')
   }
 }
 

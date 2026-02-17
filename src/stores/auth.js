@@ -16,12 +16,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   setSaveCallback((newTheme) => {
     if (user.value) {
-      api.put('/auth/profile', { theme: newTheme }).catch(() => {})
+      api.put('/auth/profile', { theme: newTheme }).catch(() => { })
     }
   })
 
   async function init() {
-    const token = localStorage.getItem('mappsly-token')
+    const token = localStorage.getItem('pinna-token')
     if (!token) { loading.value = false; return }
     try {
       const data = await api.get('/auth/me')

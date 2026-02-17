@@ -1,8 +1,10 @@
-# Account System Design
+# Account System Design for Pinna
 
-## Summary
+## 1. Overview
+This document outlines the design and architecture for the account system in **Pinna**. The goal is to provide a secure, seamless, and user-friendly authentication and profile management experience.
 
-Add user accounts with email+password authentication and PostgreSQL storage to Mappsly. Replaces localStorage with per-user cloud-synced data.
+## 2. Requirements
+Add user accounts with email+password authentication and PostgreSQL storage to Pinna. Replaces localStorage with per-user cloud-synced data.
 
 ## Stack
 

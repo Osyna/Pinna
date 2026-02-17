@@ -1,10 +1,24 @@
-# Obsidian Glass Redesign Implementation Plan
+# Obsidian Glass# Pinna App Implementation Plan
+> Status: In Progress
+> Date: 2026-02-15
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+## Overview
+This document outlines the implementation plan for the **Pinna** application, focusing on the new "Obsidian Glass" design system. The goal is to create a visually stunning, premium, and highly interactive map-based application.
 
-**Goal:** Transform Mappsly's UI from its current indigo/dark theme to a premium Obsidian Glass design system with coral accents, frosted glass surfaces, ambient glow effects, and iOS-native feel.
-
-**Architecture:** CSS-variable-first approach. Overhaul `style.css` global tokens to Obsidian Glass values (coral accent, deeper backgrounds, glass effects), then update each component's scoped styles for glass cards, blur effects, and premium animations. Add ambient glow orbs component. Keep all Vue component logic/templates stable except for minor class additions.
+## 1. Project Setup & Foundation
+- [x] Initialize Project
+    - [x] Setup Vite + Vue 3 + Ionic Framework
+    - [x] Configure Sass/SCSS
+    - [x] Setup Directory Structure
+- [x] Clean Slate
+    - [x] Remove default Ionic boilerplate
+    - [x] Set up custom `index.html` with correct meta tags
+    - [x] Configure `vite.config.js` for alias resolution (`@/`)
+- [x] Design System Tokens (`src/theme/variables.scss`)
+    - [x] Define Color Palette (Obsidian, Glass variants, Neon accents)
+    - [x] Define Typography (Inter/Outfit font families)
+    - [x] Define Spacing & Shadows (Glassmorphism effects)
+    - [x] Define Animations (Transitions, Keyframes) component. Keep all Vue component logic/templates stable except for minor class additions.
 
 **Tech Stack:** Vue 3 Composition API, Ionic Vue (iOS mode), CSS custom properties, backdrop-filter, Plus Jakarta Sans + Inter fonts
 
