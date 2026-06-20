@@ -86,6 +86,7 @@ export default function authRoutes(prisma) {
       const refreshToken = generateRefreshToken(user.id)
       res.status(201).json({ token, refreshToken, user })
     } catch (err) {
+      console.error('Registration error:', err)
       res.status(500).json({ error: 'Registration failed' })
     }
   })
@@ -112,6 +113,7 @@ export default function authRoutes(prisma) {
       })
       res.json({ token, refreshToken, user: safe })
     } catch (err) {
+      console.error('Login error:', err)
       res.status(500).json({ error: 'Login failed' })
     }
   })
