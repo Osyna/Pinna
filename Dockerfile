@@ -39,5 +39,6 @@ RUN mkdir -p /run/nginx
 
 EXPOSE 80
 
-# Start nginx and Express server
-CMD sh -c "nginx && node server/index.js"
+# Sync the database schema (creates tables if they don't exist), then
+# start nginx and the Express server.
+CMD sh -c "npx prisma db push --skip-generate && nginx && node server/index.js"
