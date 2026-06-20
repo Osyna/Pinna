@@ -34,11 +34,14 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy nginx config
 COPY nginx.conf /etc/nginx/http.d/default.conf
 
+# Copy and prepare the startup script
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
+
 # Create nginx pid directory
 RUN mkdir -p /run/nginx
 
 EXPOSE 80
 
-# Sync the database schema (creates tables if they don't exist), then
-# start nginx and the Express server.
-CMD sh -c "npx prisma db push --skip-generate && nginx && node server/index.js"
+# Sync the database schema, then start nginx and the Express server.
+CMD ["./docker-entrypoint.sh"]
