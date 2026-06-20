@@ -12,6 +12,11 @@ const prisma = new PrismaClient()
 const app = express()
 const PORT = process.env.PORT || 3001
 
+// Behind a reverse proxy (Nginx) in production, so trust the first hop.
+// This lets express-rate-limit read the real client IP from X-Forwarded-For
+// without allowing clients to spoof it.
+app.set('trust proxy', 1)
+
 app.use(helmet({
   contentSecurityPolicy: false, // CSP handled by Nginx in production
 }))
