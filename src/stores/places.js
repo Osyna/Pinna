@@ -262,7 +262,10 @@ export const usePlacesStore = defineStore("pinna-places", () => {
     if (selectedPlaceId.value === id) {
       selectedPlaceId.value = null
     }
-    showToast('Moved to Recently Deleted', { type: 'success' })
+    showToast('Moved to Recently Deleted', {
+      type: 'success',
+      action: { label: 'Undo', handler: () => restorePlace(id).catch(() => {}) },
+    })
   }
 
   async function fetchTrash() {

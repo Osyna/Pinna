@@ -211,19 +211,19 @@ function formatDate(ts) {
               {{ category?.name }}
             </div>
             <div class="hero-btns">
-              <button v-if="!readonly && !isEditing" class="hero-icon-btn" title="Edit place" @click="startEdit">
+              <button v-if="!readonly && !isEditing" class="hero-icon-btn" title="Edit place" aria-label="Edit place" @click="startEdit">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
               </button>
-              <button v-if="!readonly && !isEditing" class="hero-icon-btn danger" title="Delete place" @click="showDeleteConfirm = !showDeleteConfirm">
+              <button v-if="!readonly && !isEditing" class="hero-icon-btn danger" title="Delete place" aria-label="Delete place" @click="showDeleteConfirm = !showDeleteConfirm">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                 </svg>
               </button>
-              <button class="close-btn" @click="hapticTap(); $emit('close')">
+              <button class="close-btn" aria-label="Close" @click="hapticTap(); $emit('close')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                   <line x1="18" y1="6" x2="6" y2="18"/>
                   <line x1="6" y1="6" x2="18" y2="18"/>

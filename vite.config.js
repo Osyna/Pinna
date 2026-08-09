@@ -3,6 +3,16 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          maplibre: ['maplibre-gl'],
+          vendor: ['vue', 'pinia'],
+        },
+      },
+    },
+  },
   css: {
     preprocessorOptions: {
       scss: {

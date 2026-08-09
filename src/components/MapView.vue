@@ -1076,7 +1076,7 @@ watch(theme, (newTheme) => {
 
     <!-- Right-side controls — vertically centered -->
     <div class="right-controls" :class="{ 'build-anim build-anim--slide-right build-anim--delay-3': splashFinished }">
-      <button :class="['rc-btn', { active: locating || userLat != null }]" @click="locateMe" title="My location">
+      <button :class="['rc-btn', { active: locating || userLat != null }]" @click="locateMe" title="My location" aria-label="My location">
         <svg v-if="!locating" width="18" height="18" viewBox="0 0 24 24" fill="none"
           :stroke="userLat != null ? 'var(--accent)' : 'currentColor'" stroke-width="2" stroke-linecap="round">
           <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3m-10-10h3m14 0h3"/>
@@ -1084,13 +1084,13 @@ watch(theme, (newTheme) => {
         <div v-else class="btn-spin"></div>
       </button>
       <div ref="zoomPillRef" class="rc-zoom-pill">
-        <button class="rc-zoom-btn" @click="map && map.zoomIn({ duration: 300 })" title="Zoom in">
+        <button class="rc-zoom-btn" @click="map && map.zoomIn({ duration: 300 })" title="Zoom in" aria-label="Zoom in">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </button>
         <div class="rc-zoom-divider"></div>
-        <button class="rc-zoom-btn" @click="map && map.zoomOut({ duration: 300 })" title="Zoom out">
+        <button class="rc-zoom-btn" @click="map && map.zoomOut({ duration: 300 })" title="Zoom out" aria-label="Zoom out">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
@@ -1099,7 +1099,7 @@ watch(theme, (newTheme) => {
       <button
         v-if="!friendsStore.viewingFriendId && friendsStore.friends.length > 0"
         class="rc-btn"
-        @click="showFriendPicker = !showFriendPicker"
+        aria-label="View a friend's map" @click="showFriendPicker = !showFriendPicker"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
@@ -1180,7 +1180,7 @@ watch(theme, (newTheme) => {
 
     <!-- Pin types: legend button + panel -->
     <button
-      class="legend-fab"
+      class="legend-fab" aria-label="Pin types legend"
       :class="{ 'build-anim build-anim--drop build-anim--delay-1': splashFinished && !hasBuiltLegend }"
       title="Pin types"
       @click="showLegendPanel = !showLegendPanel"

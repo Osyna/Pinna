@@ -1,6 +1,10 @@
 <script setup>
-import { useToast } from '../composables/useToast'
+import { useToast, dismissToast } from '../composables/useToast'
 const { toasts } = useToast()
+
+function runAction(t) {
+  try { t.action.handler() } finally { dismissToast(t.id) }
+}
 </script>
 
 <template>
@@ -11,12 +15,26 @@ const { toasts } = useToast()
         <svg v-else-if="t.type === 'error'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <span>{{ t.message }}</span>
+        <button v-if="t.action" class="toast-action" @click="runAction(t)">{{ t.action.label }}</button>
       </div>
     </transition-group>
   </div>
 </template>
 
 <style scoped lang="scss">
+.toast-action {
+  margin-left: 6px;
+  flex-shrink: 0;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: none;
+  border-radius: 10px;
+  padding: 5px 12px;
+  font-weight: 900;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
 .toast-container {
   position: fixed;
   top: calc(var(--safe-top) + 12px);

@@ -58,6 +58,9 @@ model Place {
   deletedAt DateTime?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, deletedAt])
+  @@index([userId, category])
 }
 
 model Category {
@@ -67,4 +70,6 @@ model Category {
   icon   String
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
