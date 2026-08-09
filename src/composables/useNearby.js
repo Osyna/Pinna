@@ -1,6 +1,9 @@
 import { ref } from 'vue'
 
-const OVERPASS_API = 'https://overpass-api.de/api/interpreter'
+import { authHeader } from '../api.js'
+
+// Proxied through our server (caching + rate limits)
+const OVERPASS_API = '/api/geo/overpass'
 
 export function useNearby() {
   const nearbyPlaces = ref([])
@@ -27,8 +30,8 @@ export function useNearby() {
     try {
       const response = await fetch(OVERPASS_API, {
         method: 'POST',
-        body: `data=${encodeURIComponent(query)}`,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: JSON.stringify({ data: query }),
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
       })
 
       if (!response.ok) throw new Error('Failed to fetch nearby places')

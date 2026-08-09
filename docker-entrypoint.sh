@@ -12,10 +12,14 @@ set -e
 # Start nginx (runs in the background as a daemon).
 nginx
 
-# Sync the database schema (creates tables if they don't exist). Don't abort
-# startup if this fails.
-if ! npx prisma db push --skip-generate; then
-  echo "WARN: 'prisma db push' failed; starting server anyway. Check DATABASE_URL."
+# Apply committed migrations (reviewable history). Fall back to a schema
+# push for databases that predate the migration baseline, and never abort
+# startup if the database is temporarily unreachable.
+if ! npx prisma migrate deploy; then
+  echo "WARN: 'prisma migrate deploy' failed; trying 'prisma db push' fallback."
+  if ! npx prisma db push --skip-generate; then
+    echo "WARN: schema sync failed; starting server anyway. Check DATABASE_URL."
+  fi
 fi
 
 # Start the API server in the foreground (keeps the container alive).

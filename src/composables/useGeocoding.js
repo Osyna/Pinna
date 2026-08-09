@@ -1,6 +1,9 @@
 import { ref } from 'vue'
 
-const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org'
+import { authHeader } from '../api.js'
+
+// Proxied through our server (caching + rate limits + proper UA)
+const NOMINATIM_BASE = '/api/geo'
 
 const FOOD_DRINK_TYPES = new Set([
   'restaurant', 'bar', 'cafe', 'pub', 'fast_food', 'biergarten',
@@ -38,7 +41,7 @@ export function useGeocoding() {
       const allResults = []
       const q = query.trim()
       const signal = abortController.signal
-      const headers = { 'Accept-Language': 'en' }
+      const headers = { 'Accept-Language': 'en', ...authHeader() }
 
       // Build viewbox string for Nominatim: west,north,east,south
       const vb = viewbox
@@ -190,7 +193,7 @@ export function useGeocoding() {
       })
 
       const response = await fetch(`${NOMINATIM_BASE}/reverse?${params}`, {
-        headers: { 'Accept-Language': 'en' },
+        headers: { 'Accept-Language': 'en', ...authHeader() },
       })
 
       if (!response.ok) throw new Error('Reverse geocoding failed')
