@@ -13,6 +13,7 @@ import { useUserLocation } from '../composables/useUserLocation'
 import { useTheme } from '../composables/useTheme'
 import { hapticTap } from '../composables/useHaptics'
 import { ACCENT } from '../theme'
+import { iconPathFor, categoryIconSvg, markerImageId, drawMarkerImage } from '../categoryIcons'
 
 const props = defineProps({
   splashFinished: Boolean
@@ -26,6 +27,7 @@ const { reverseGeocode } = useGeocoding()
 const { nearbyPlaces, loading: nearbyLoading, fetchNearby, clearNearby } = useNearby()
 const { userLat, userLng, accuracy, locating, error: geoError, locate, startWatching } = useUserLocation()
 const { theme } = useTheme()
+// iconPathFor is used directly in the legend template
 
 const mapContainer = ref(null)
 const zoomPillRef = ref(null)
@@ -280,8 +282,8 @@ function setupCustomLayers() {
       'circle-radius': ['step', ['get', 'point_count'], 16, 10, 22, 50, 28],
       'circle-color': ACCENT,
       'circle-stroke-width': 3,
-      'circle-stroke-color': '#ffffff',
-      'circle-opacity': 0.9,
+      'circle-stroke-color': '#2e2140',
+      'circle-opacity': 1,
     },
   })
   map.addLayer({
@@ -297,28 +299,29 @@ function setupCustomLayers() {
     paint: { 'text-color': '#ffffff' },
   })
 
-  // Places (normal — exclude clusters)
+  // Places (normal — exclude clusters): category icon markers so that
+  // color is never the only channel encoding a category
   map.addLayer({
     id: 'places-circles',
-    type: 'circle',
+    type: 'symbol',
     source: 'places',
     filter: ['all', ['!', ['has', 'point_count']], ['!=', ['get', 'selected'], true]],
-    paint: {
-      'circle-radius': 7,
-      'circle-color': ['get', 'color'],
-      'circle-stroke-width': 2.5,
-      'circle-stroke-color': '#ffffff',
+    layout: {
+      'icon-image': ['get', 'iconId'],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.7, 12, 1],
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
     },
   })
 
-  // Places (selected glow — behind selected dot, exclude clusters)
+  // Places (selected glow — behind selected icon, exclude clusters)
   map.addLayer({
     id: 'places-selected-glow',
     type: 'circle',
     source: 'places',
     filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'selected'], true]],
     paint: {
-      'circle-radius': 16,
+      'circle-radius': 22,
       'circle-color': '#ffffff',
       'circle-opacity': 0,
       'circle-stroke-width': 4,
@@ -330,14 +333,14 @@ function setupCustomLayers() {
   // Places (selected dot — exclude clusters)
   map.addLayer({
     id: 'places-selected',
-    type: 'circle',
+    type: 'symbol',
     source: 'places',
     filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'selected'], true]],
-    paint: {
-      'circle-radius': 10,
-      'circle-color': ['get', 'color'],
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#ffffff',
+    layout: {
+      'icon-image': ['get', 'iconId'],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.9, 12, 1.25],
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
     },
   })
 
@@ -487,7 +490,7 @@ function renderMarkers() {
     return {
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [coord6(place.lng), coord6(place.lat)] },
-      properties: { id: place.id, color: cat.color, selected: isSelected },
+      properties: { id: place.id, color: cat.color, iconId: markerImageId(cat), selected: isSelected },
     }
   })
   map.getSource('places').setData({ type: 'FeatureCollection', features })
@@ -876,7 +879,7 @@ function showPlacePreview(place) {
   const html = `
     <div class="place-preview">
       <div class="pp-header">
-        <span class="pp-cat-dot" style="background:${catColor}"></span>
+        <span class="pp-cat-icon" style="color:${catColor}">${categoryIconSvg(cat?.icon, { size: 14 })}</span>
         <span class="pp-name">${place.name}</span>
       </div>
       <div class="pp-meta">
@@ -909,6 +912,15 @@ onMounted(() => {
 
   nearbyPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, maxWidth: '250px' })
   setupZoomDrag()
+
+  // Category marker icons are generated lazily (and re-generated after every
+  // style switch, which wipes images): white disc + ink outline + colored icon.
+  map.on('styleimagemissing', (e) => {
+    if (!e.id.startsWith('cat-marker|') || map.hasImage(e.id)) return
+    const [, icon, color] = e.id.split('|')
+    const { imageData, pixelRatio } = drawMarkerImage(icon, color)
+    map.addImage(e.id, imageData, { pixelRatio })
+  })
 
   map.on('load', () => {
     setupCustomLayers()
@@ -1167,9 +1179,13 @@ watch(theme, (newTheme) => {
         >
           <div
             class="legend-dot-item"
-            :style="{ background: cat.color }"
+            :style="{ color: cat.color, background: cat.color + '24' }"
             :title="cat.name"
-          ></div>
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <path :d="iconPathFor(cat.icon)" />
+            </svg>
+          </div>
           
           <transition name="legend-text">
             <div v-if="showLegendPanel" class="legend-text-group" @click.stop>
@@ -1520,9 +1536,9 @@ watch(theme, (newTheme) => {
   border-radius: 14px;
   box-shadow: var(--shadow);
   cursor: pointer;
-  padding: 8px 5px;
-  width: 20px;
-  min-width: 20px;
+  padding: 8px 6px;
+  width: 38px;
+  min-width: 38px;
   gap: 6px; /* Collapsed gap */
   transition: 
     width 0.8s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1546,8 +1562,8 @@ watch(theme, (newTheme) => {
   }
 
   &.is-expanded {
-    width: 160px; /* Reduced from 180px */
-    min-width: 160px;
+    width: 176px;
+    min-width: 176px;
     gap: 6px;    /* Reduced from 10px */
     padding: 8px; /* Balanced padding */
     border-radius: 12px;
@@ -1561,9 +1577,9 @@ watch(theme, (newTheme) => {
 .legend-row {
   display: flex;
   align-items: center;
-  gap: 6px; /* Reduced from 8px */
+  gap: 7px;
   width: 100%;
-  min-height: 18px;
+  min-height: 24px;
 }
 
 .legend-text-group {
@@ -1625,12 +1641,17 @@ watch(theme, (newTheme) => {
 
 
 .legend-dot-item {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 2px solid #2e2140;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: transform 150ms ease;
+
+  svg { display: block; }
 }
 
 .legend-container:not(.is-expanded):hover .legend-dot-item { transform: scale(1.15); }
@@ -1645,7 +1666,6 @@ watch(theme, (newTheme) => {
   .rc-zoom-btn { width: 36px; height: 32px; }
   .friend-picker { right: 54px; }
   .legend-dots { left: 6px; gap: 4px; padding: 6px 4px; }
-  .legend-dot-item { width: 8px; height: 8px; }
   .legend-panel { left: 6px; min-width: 140px; }
   .legend-item { padding: 6px 12px; }
   .legend-item-name { font-size: 12px; }
