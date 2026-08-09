@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────────────
+# Pinna dev launcher
+#
+#   ./start local    frontend (Vite :5173) + API (:3001) using .env.local
+#                    → point .env.local's DATABASE_URL at the Dokploy
+#                      Postgres (external port) to test against live data
+#   ./start dev      same, but using .env (local database)
+#
+# .env.local is gitignored — put real credentials only there.
+# ──────────────────────────────────────────────────────────────────────
+set -euo pipefail
+cd "$(dirname "$0")"
+
+MODE="${1:-local}"
+
+case "$MODE" in
+  local) ENV_FILE=".env.local" ;;
+  dev)   ENV_FILE=".env" ;;
+  *) echo "usage: ./start [local|dev]"; exit 1 ;;
+esac
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "✗ $ENV_FILE not found."
+  echo "  Create it with DATABASE_URL, JWT_SECRET and ALLOWED_ORIGINS."
+  echo "  (see .env.example — for './start local' use the Dokploy Postgres"
+  echo "   external host:port, e.g. postgresql://user:pass@dokploy-host:5433/db)"
+  exit 1
+fi
+
+if [ ! -d node_modules ]; then
+  echo "→ npm install"
+  npm install --no-audit --no-fund
+fi
+
+# Prisma client (no schema push here — never mutate the live DB on start)
+npx prisma generate > /dev/null
+
+echo "→ starting Pinna [$MODE] — frontend http://localhost:5173  api http://localhost:3001 (env: $ENV_FILE)"
+exec npx concurrently -n fe,be -c cyan,green \
+  "vite" \
+  "node --env-file=$ENV_FILE server/index.js"

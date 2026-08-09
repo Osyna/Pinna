@@ -697,14 +697,22 @@ html[data-skin="cartoon"] {
   .fv-add-prefix { font-family: $ct-display; font-weight: 800; color: $ct-purple; }
   .fv-add-input { background: transparent; font-weight: 800; color: $ct-ink; }
 
+  /* Add button lives INSIDE the input pill — compact, with room to breathe */
   .fv-add-btn {
     background: $ct-purple;
-    border: 3px solid $ct-ink;
-    border-radius: 20px;
+    border: 2px solid $ct-ink;
+    border-radius: 13px;
+    margin: 5px;
+    padding: 8px 16px;
     font-weight: 900;
     color: #fff;
 
-    &:disabled { background: #e6ddf7; color: #9c90b3; border-color: rgba(46, 33, 64, 0.4); }
+    &:disabled {
+      opacity: 1;
+      background: #e6ddf7;
+      color: #9c90b3;
+      border-color: rgba(46, 33, 64, 0.35);
+    }
     &:active { transform: translateY(2px); }
   }
 
@@ -712,18 +720,25 @@ html[data-skin="cartoon"] {
     background: $ct-track;
     border: 2.5px solid $ct-ink;
     border-radius: 18px;
+    /* base theme uses its padding as the page gutter — move it to margin
+       so the track doesn't run edge-to-edge */
+    margin: 14px 16px 0;
     padding: 5px;
+    gap: 5px;
   }
 
   .fv-tab {
     border-radius: 13px;
+    border-bottom: none;
+    padding: 9px 10px;
     font-weight: 900;
     color: $ct-body;
 
     &.active {
       background: #fff;
       color: $ct-purple;
-      box-shadow: 0 3px 0 rgba(46, 33, 64, 0.2);
+      border-bottom: none;
+      box-shadow: none;
     }
   }
 
@@ -784,10 +799,39 @@ html[data-skin="cartoon"] {
 
   /* ── 8 · Profile ───────────────────────────────────────────────── */
   .pf-hero {
+    position: relative;
+    overflow: hidden;
+    margin: 12px 16px 0;
     background: $ct-lavender;
     border: 3px solid $ct-ink;
     border-radius: 28px;
     box-shadow: none;
+
+    /* decorative corner blobs from the design mock */
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      z-index: 0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    &::before {
+      left: -18px;
+      top: -18px;
+      width: 70px;
+      height: 70px;
+      background: rgba(109, 59, 240, 0.13);
+    }
+
+    &::after {
+      right: -14px;
+      bottom: -22px;
+      width: 84px;
+      height: 84px;
+      background: rgba(255, 201, 74, 0.35);
+    }
   }
 
   .pf-avatar-wrap {
@@ -829,10 +873,25 @@ html[data-skin="cartoon"] {
     font-weight: 900;
   }
 
+  /* base theme wraps the stats in a glass card — dissolve it so the three
+     stat pills stand alone like the design */
+  .pf-stats {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    margin: 13px 16px 16px;
+    gap: 9px;
+  }
+
   .pf-stat {
     background: #fff;
     border: 3px solid $ct-ink;
     border-radius: 20px;
+    padding: 13px 8px;
     box-shadow: none;
   }
 
@@ -917,7 +976,17 @@ html[data-skin="cartoon"] {
     border: none;
     border-top: 4px solid $ct-ink;
     border-radius: 32px 32px 0 0;
-    box-shadow: 0 -6px 0 rgba(46, 33, 64, 0.15);
+    box-shadow: none;
+  }
+
+  /* Desktop: the sheet is a centered floating card, not a bottom sheet —
+     full ink border, full radius, no shadow */
+  @media (min-width: 769px) {
+    .detail-sheet {
+      border: 3px solid $ct-ink;
+      border-radius: 28px;
+      box-shadow: none;
+    }
   }
 
   .handle-bar {
@@ -962,10 +1031,30 @@ html[data-skin="cartoon"] {
     &:active { transform: translateY(2px); }
   }
 
+  .info-sections {
+    gap: 9px;
+    padding: 4px 22px 14px;
+  }
+
   .info-row {
     background: #fff;
     border: 2.5px solid $ct-ink;
     border-radius: 16px;
+    padding: 10px 12px;
+    align-items: center;
+
+    /* base theme removes the last row's bottom divider with a higher-
+       specificity :last-child rule — restore the full cartoon border */
+    &:last-child { border-bottom: 2.5px solid $ct-ink; }
+  }
+
+  .info-icon {
+    width: 34px;
+    height: 34px;
+    background: $ct-lavender;
+    border: 2px solid $ct-ink;
+    border-radius: 11px;
+    color: $ct-body;
   }
 
   .info-label { font-weight: 900; }
