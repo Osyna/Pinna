@@ -37,11 +37,43 @@ function cacheSet(key, ttl, status, body) {
   cache.set(key, { t: Date.now(), ttl, status, body })
 }
 
+let prismaRef = null
+
+async function l2Get(key) {
+  if (!prismaRef) return null
+  try {
+    const row = await prismaRef.geoCache.findUnique({ where: { key } })
+    if (!row) return null
+    if (row.expiresAt < new Date()) {
+      prismaRef.geoCache.delete({ where: { key } }).catch(() => {})
+      return null
+    }
+    return { status: row.status, body: JSON.parse(row.body) }
+  } catch { return null }
+}
+
+function l2Set(key, ttl, status, body) {
+  if (!prismaRef) return
+  const expiresAt = new Date(Date.now() + ttl)
+  const data = { status, body: JSON.stringify(body), expiresAt }
+  prismaRef.geoCache.upsert({ where: { key }, create: { key, ...data }, update: data }).catch(() => {})
+  // opportunistic pruning (~1% of writes)
+  if (Math.random() < 0.01) {
+    prismaRef.geoCache.deleteMany({ where: { expiresAt: { lt: new Date() } } }).catch(() => {})
+  }
+}
+
 async function proxyJson(res, key, ttl, doFetch) {
   const hit = cacheGet(key)
   if (hit) {
     res.set('X-Geo-Cache', 'hit')
     return res.status(hit.status).json(hit.body)
+  }
+  const l2 = await l2Get(key)
+  if (l2) {
+    cacheSet(key, ttl, l2.status, l2.body) // promote to L1
+    res.set('X-Geo-Cache', 'hit-db')
+    return res.status(l2.status).json(l2.body)
   }
   try {
     const upstream = await doFetch()
@@ -49,16 +81,22 @@ async function proxyJson(res, key, ttl, doFetch) {
     if (body == null) {
       return res.status(502).json({ error: 'Bad upstream response' })
     }
-    if (upstream.ok) cacheSet(key, ttl, upstream.status, body)
+    if (upstream.ok) {
+      cacheSet(key, ttl, upstream.status, body)
+      l2Set(key, ttl, upstream.status, body)
+    }
     res.set('X-Geo-Cache', 'miss')
     res.status(upstream.status).json(body)
   } catch {
+    // upstream down: serve stale L2 if any, else 502
     res.status(502).json({ error: 'Geo service unavailable' })
   }
 }
 
-export default function geoRoutes() {
+export default function geoRoutes(prisma = null) {
   const router = Router()
+
+  prismaRef = prisma
 
   const geoLimiter = rateLimit({
     windowMs: 60 * 1000,

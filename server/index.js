@@ -46,7 +46,7 @@ app.use('/api/places', placesRoutes(prisma))
 app.use('/api/categories', categoriesRoutes(prisma))
 app.use('/api/preview', previewRoutes())
 app.use('/api/friends', friendsRoutes(prisma))
-app.use('/api/geo', geoRoutes())
+app.use('/api/geo', geoRoutes(prisma))
 app.use('/api/lists', listsRoutes(prisma))
 
 // Central error handler: log with stack, answer with a safe message

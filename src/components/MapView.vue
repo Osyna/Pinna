@@ -191,30 +191,9 @@ function metersToPixels(meters, lat, zoom) {
 /* ─── Layer setup (called on load + after style switch) ─── */
 function setupCustomLayers() {
   const nearbyColor = theme.value === 'light' ? '#0891b2' : '#22d3ee'
-  const borderOpacity = (currentLayer.value === 'satellite') ? 0.6 : (theme.value === 'light' ? 0.35 : 0.45)
-
-  // Country borders overlay
-  map.addSource('country-boundaries', {
-    type: 'vector',
-    tiles: ['https://demotiles.maplibre.org/tiles/{z}/{x}/{y}.pbf'],
-    maxzoom: 4,
-  })
-  map.addLayer({
-    id: 'country-border-lines',
-    type: 'line',
-    source: 'country-boundaries',
-    'source-layer': 'countries',
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round',
-    },
-    paint: {
-      'line-color': `${ACCENT}50`,
-      'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.4, 3, 1, 6, 1.5],
-      'line-opacity': borderOpacity,
-      'line-blur': 0.5,
-    },
-  })
+  // (The old country-border overlay from demotiles.maplibre.org was removed:
+  // it doubled the basemap's own boundaries with aliased purple lines and
+  // added an unreliable external tile dependency.)
 
   // Sources — places & nearby use clustering
   map.addSource('places', {
@@ -730,10 +709,6 @@ function updateLayerColors() {
   const nearbyColor = theme.value === 'light' ? '#0891b2' : '#22d3ee'
   if (map.getLayer('nearby-clusters')) {
     map.setPaintProperty('nearby-clusters', 'circle-color', nearbyColor)
-  }
-  if (map.getLayer('country-border-lines')) {
-    const borderOpacity = (currentLayer.value === 'satellite') ? 0.6 : (theme.value === 'light' ? 0.35 : 0.45)
-    map.setPaintProperty('country-border-lines', 'line-opacity', borderOpacity)
   }
 }
 

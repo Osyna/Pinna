@@ -226,20 +226,23 @@ html[data-skin="cartoon"] {
   .map-container {
     background: #a9e1f2;
 
+    /* papery dot grid — plain low-alpha dots (no blend mode: multiply
+       amplified tile seams and aliased into visible grid lines) */
     &::after {
       content: '';
       position: absolute;
       inset: 0;
       z-index: 1;
       pointer-events: none;
-      background-image: radial-gradient(rgba(46, 33, 64, 0.09) 1.5px, transparent 1.5px);
-      background-size: 22px 22px;
-      mix-blend-mode: multiply;
+      background-image: radial-gradient(rgba(46, 33, 64, 0.06) 1px, transparent 1.5px);
+      background-size: 24px 24px;
     }
   }
 
+  /* warm cartoon grade — no contrast/brightness terms (they amplify
+     tile-edge seams into visible borders at low zoom) */
   .maplibregl-canvas {
-    filter: saturate(1.35) sepia(0.14) hue-rotate(-6deg) brightness(1.04) contrast(0.96);
+    filter: saturate(1.22) sepia(0.10) hue-rotate(-5deg);
   }
 
   /* Floating search bar (room for the legend button on the right) */
