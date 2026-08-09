@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { useTheme } from '../composables/useTheme'
 import { usePlacesStore } from '../stores/places'
 import { useFriendsStore } from '../stores/friends'
 import { showToast } from '../composables/useToast'
@@ -9,7 +8,6 @@ import { showToast } from '../composables/useToast'
 const authStore = useAuthStore()
 const placesStore = usePlacesStore()
 const friendsStore = useFriendsStore()
-const { theme, skin, toggleTheme, toggleSkin } = useTheme()
 
 const editing = ref(false)
 const saving = ref(false)
@@ -454,40 +452,7 @@ async function removeAvatar() {
       <div class="pf-section">
         <h3 class="pf-section-title">Settings</h3>
 
-        <!-- Theme toggle -->
         <div class="pf-settings-card">
-          <div class="pf-setting-row">
-            <div class="pf-setting-label">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path v-if="theme === 'dark'" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                <circle v-else cx="12" cy="12" r="5"/><line v-if="theme !== 'dark'" x1="12" y1="1" x2="12" y2="3"/><line v-if="theme !== 'dark'" x1="12" y1="21" x2="12" y2="23"/><line v-if="theme !== 'dark'" x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line v-if="theme !== 'dark'" x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line v-if="theme !== 'dark'" x1="1" y1="12" x2="3" y2="12"/><line v-if="theme !== 'dark'" x1="21" y1="12" x2="23" y2="12"/><line v-if="theme !== 'dark'" x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line v-if="theme !== 'dark'" x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-              </svg>
-              <span>{{ theme === 'dark' ? 'Dark Mode' : 'Light Mode' }}</span>
-            </div>
-            <button class="pf-toggle" :class="{ on: theme === 'light' }" @click="toggleTheme">
-              <span class="pf-toggle-knob"></span>
-            </button>
-          </div>
-
-          <div class="pf-setting-divider"></div>
-
-          <!-- Cartoon mode toggle -->
-          <div class="pf-setting-row">
-            <div class="pf-setting-label">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="6" y1="11" x2="10" y2="11"/><line x1="8" y1="9" x2="8" y2="13"/>
-                <line x1="15" y1="12" x2="15.01" y2="12"/><line x1="18" y1="10" x2="18.01" y2="10"/>
-                <path d="M17.32 5H6.68a4 4 0 00-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 003 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 019.828 16h4.344a2 2 0 011.414.586L17 18c.5.5 1 1 2 1a3 3 0 003-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0017.32 5z"/>
-              </svg>
-              <span>Cartoon Mode</span>
-            </div>
-            <button class="pf-toggle" :class="{ on: skin === 'cartoon' }" @click="toggleSkin">
-              <span class="pf-toggle-knob"></span>
-            </button>
-          </div>
-
-          <div class="pf-setting-divider"></div>
-
           <!-- Change password -->
           <button class="pf-setting-row clickable" @click="showPwSection = !showPwSection">
             <div class="pf-setting-label">

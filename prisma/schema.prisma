@@ -20,7 +20,6 @@ model User {
   avatarData       Bytes?
   avatarMime       String?
   theme            String       @default("dark")
-  skin             String       @default("classic")
   createdAt        DateTime     @default(now())
   places           Place[]
   categories       Category[]

@@ -1,6 +1,7 @@
 /* ════════════════════════════════════════════════════════════════════
-   CARTOON GAME SKIN  —  "Cartoon game UI overhaul"
-   Activated via  html[data-skin="cartoon"]  (Profile → Settings → Cartoon Mode)
+   CARTOON GAME THEME  —  "Cartoon game UI overhaul"
+   Pinna's default (and only) look, applied via html[data-skin="cartoon"],
+   which is set statically in index.html and re-asserted in useTheme.js.
 
    Design language (from the Claude Design handoff `Places App.dc.html`):
    · Ink outlines   #2e2140, 2.5–3px solid, everywhere
@@ -132,6 +133,31 @@ html[data-skin="cartoon"] {
 
   /* Ambient glow orbs feel foggy on paper — hide them */
   .ambient-orb { display: none; }
+
+  /* Splash screen: cream paper backdrop, cartoon type */
+  .splash-container {
+    background: #e7dcc9;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    &::before { display: none; }
+  }
+
+  .expansion-circle { background: $ct-purple; }
+
+  .brand-name {
+    font-family: $ct-display;
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    -webkit-text-fill-color: $ct-purple;
+    color: $ct-purple;
+    letter-spacing: 0;
+  }
+
+  .tagline { color: $ct-body; font-weight: 800; }
+
+  .main-logo .logo-circle { stroke: $ct-ink; stroke-width: 5px; }
 
   /* ── 3 · App shell · bottom tab bar ────────────────────────────── */
   .bottom-tabs {
