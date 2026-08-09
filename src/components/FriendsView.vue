@@ -1,10 +1,10 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { defineAsyncComponent, ref, reactive, onMounted } from 'vue'
 import { useFriendsStore } from '../stores/friends'
 import { useAuthStore } from '../stores/auth'
 import { hapticTap } from '../composables/useHaptics'
 import { showToast } from '../composables/useToast'
-import FriendProfileView from './FriendProfileView.vue'
+const FriendProfileView = defineAsyncComponent(() => import('./FriendProfileView.vue'))
 
 const emit = defineEmits(['view-friend-map'])
 const friendsStore = useFriendsStore()

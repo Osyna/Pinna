@@ -1,5 +1,9 @@
 const TILE_CACHE = 'mappsly-tiles-v1'
-const APP_CACHE = 'mappsly-app-v1'
+const APP_CACHE = 'mappsly-app-v2'
+const API_CACHE = 'pinna-api-v1'
+
+// Read-only API endpoints worth serving from cache when offline
+const CACHEABLE_API = /\/api\/(places(\/trash\/list)?|categories|friends)(\?.*)?$/
 const TILE_MAX_AGE = 7 * 24 * 60 * 60 * 1000 // 7 days
 const TILE_MAX_ENTRIES = 2000
 
@@ -26,8 +30,31 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(tileFirst(event.request))
   } else if (isAppAsset(url)) {
     event.respondWith(staleWhileRevalidate(event.request, APP_CACHE))
+  } else if (
+    event.request.method === 'GET' &&
+    url.origin === self.location.origin &&
+    CACHEABLE_API.test(url.pathname + url.search)
+  ) {
+    event.respondWith(networkFirstApi(event.request))
   }
 })
+
+// Network-first with cache fallback: fresh data online, saved data offline.
+async function networkFirstApi(request) {
+  const cache = await caches.open(API_CACHE)
+  try {
+    const response = await fetch(request)
+    if (response.ok) cache.put(request, response.clone())
+    return response
+  } catch {
+    const cached = await cache.match(request)
+    if (cached) return cached
+    return new Response(JSON.stringify({ error: 'offline' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+}
 
 async function tileFirst(request) {
   const cache = await caches.open(TILE_CACHE)

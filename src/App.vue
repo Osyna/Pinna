@@ -1,14 +1,14 @@
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, defineAsyncComponent } from 'vue'
 import MapView from './components/MapView.vue'
 import SearchBar from './components/SearchBar.vue'
 import SearchView from './components/SearchView.vue'
 import PlacesView from './components/PlacesView.vue'
 import ProfileView from './components/ProfileView.vue'
 import FriendsView from './components/FriendsView.vue'
-import AddPlaceModal from './components/AddPlaceModal.vue'
+const AddPlaceModal = defineAsyncComponent(() => import('./components/AddPlaceModal.vue'))
 import PlaceDetail from './components/PlaceDetail.vue'
-import AuthModal from './components/AuthModal.vue'
+const AuthModal = defineAsyncComponent(() => import('./components/AuthModal.vue'))
 import AppToast from './components/AppToast.vue'
 import SplashScreen from './components/SplashScreen.vue'
 import { useAuthStore } from './stores/auth'
@@ -194,12 +194,6 @@ function onSplashFinish() {
           <!-- Profile view -->
           <ProfileView v-if="activeTab === 'profile'" />
         </div>
-      </div>
-
-      <!-- Ambient glow (non-map tabs only) -->
-      <div v-if="activeTab !== 'map'" class="ambient-glow">
-        <div class="ambient-orb ambient-orb--coral"></div>
-        <div class="ambient-orb ambient-orb--blue"></div>
       </div>
 
       <!-- Offline banner -->

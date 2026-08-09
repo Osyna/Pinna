@@ -945,6 +945,14 @@ onMounted(() => {
     setupCustomLayers()
     setupClickHandlers()
     setupLongPress()
+    // Pre-generate marker images for known categories (no first-render pop-in)
+    store.categories.forEach(cat => {
+      const id = markerImageId(cat)
+      if (!map.hasImage(id)) {
+        const { imageData, pixelRatio } = drawMarkerImage(cat.icon, cat.color)
+        map.addImage(id, imageData, { pixelRatio })
+      }
+    })
     renderMarkers()
   })
 
@@ -968,7 +976,7 @@ onBeforeUnmount(() => {
 })
 
 /* ─── Watchers ─── */
-watch(() => [store.places, store.selectedPlaceId], () => renderMarkers(), { deep: true })
+watch(() => [store.placesVersion, store.selectedPlaceId], () => renderMarkers())
 watch(() => [friendsStore.viewingFriendPlaces, friendsStore.viewingFriendId], () => renderMarkers(), { deep: true })
 watch(nearbyPlaces, () => { if (showNearby.value) renderNearbyMarkers() })
 watch([userLat, userLng], () => updateUserMarker())

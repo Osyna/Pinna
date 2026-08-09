@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed } from 'vue'
+import { ref, shallowRef, computed, watch } from 'vue'
 import { api } from '../api.js'
 import { showToast } from '../composables/useToast'
 
@@ -152,6 +152,8 @@ const CUISINE_TYPES = [
 
 export const usePlacesStore = defineStore("pinna-places", () => {
   const places = shallowRef([])
+  const placesVersion = ref(0)
+  watch(places, () => { placesVersion.value++ })
   const trashedPlaces = shallowRef([])
   const categories = ref([...DEFAULT_CATEGORIES])
   const loaded = ref(false)
@@ -418,6 +420,7 @@ export const usePlacesStore = defineStore("pinna-places", () => {
     addPlace,
     updatePlace,
     removePlace,
+    placesVersion,
     trashedPlaces,
     fetchTrash,
     restorePlace,
