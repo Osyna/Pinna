@@ -23,9 +23,29 @@ const search = ref('')
 function onChipRowWheel(e) {
   e.currentTarget.scrollLeft += (e.deltaY || 0) + (e.deltaX || 0)
 }
+
+/* ── Recently Deleted ── */
+const showTrash = ref(false)
+const purgeConfirmId = ref(null)
+
+function toggleTrash() {
+  showTrash.value = !showTrash.value
+  if (showTrash.value) store.fetchTrash()
+}
+
+async function doPurge(id) {
+  await store.purgePlace(id)
+  purgeConfirmId.value = null
+}
+
+function trashDate(d) {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 const activeCategory = ref(null)
 onMounted(() => {
   if (userLat.value == null) locate().catch(() => {})
+  if (!friendsStore.viewingFriendId) store.fetchTrash()
 })
 
 const sortedPlaces = computed(() => {
@@ -266,6 +286,52 @@ function contextAction(action) {
           <polyline points="9 18 15 12 9 6"/>
         </svg>
       </button>
+
+      <!-- Recently Deleted -->
+      <div v-if="!friendsStore.viewingFriendId" class="pv-trash-section">
+        <button class="pv-trash-toggle" @click="toggleTrash">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+          <span>Recently Deleted</span>
+          <span v-if="store.trashedPlaces.length" class="pv-trash-count">{{ store.trashedPlaces.length }}</span>
+          <svg class="pv-trash-chevron" :style="{ transform: showTrash ? 'rotate(90deg)' : 'none' }" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+
+        <div v-if="showTrash" class="pv-trash-list">
+          <p v-if="!store.trashedPlaces.length" class="pv-trash-empty">
+            Nothing here — deleted places stay recoverable for 30 days.
+          </p>
+          <div v-for="p in store.trashedPlaces" :key="p.id" class="pv-trash-row">
+            <span class="pv-cat-icon small" :style="{ background: getCat(p.category).color + '22', color: getCat(p.category).color }">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="iconPathFor(getCat(p.category).icon)" />
+              </svg>
+            </span>
+            <div class="pv-trash-info">
+              <span class="pv-trash-name">{{ p.name }}</span>
+              <span class="pv-trash-date">deleted {{ trashDate(p.deletedAt) }}</span>
+            </div>
+            <template v-if="purgeConfirmId === p.id">
+              <span class="pv-trash-ask">Forever?</span>
+              <button class="pv-trash-btn danger" @click="doPurge(p.id)">Yes</button>
+              <button class="pv-trash-btn" @click="purgeConfirmId = null">No</button>
+            </template>
+            <template v-else>
+              <button class="pv-trash-btn restore" @click="store.restorePlace(p.id)">Restore</button>
+              <button class="pv-trash-btn danger icon" title="Delete forever" @click="purgeConfirmId = p.id">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Context menu overlay -->
@@ -496,9 +562,15 @@ function contextAction(action) {
   width: 30px;
   height: 30px;
   border-radius: 10px;
-  border: 2px solid #2e2140;
 
   svg { display: block; }
+
+  &.small {
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+    flex-shrink: 0;
+  }
 }
 
 .pv-card-body {

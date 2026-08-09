@@ -55,6 +55,7 @@ model Place {
   website   String   @default("")
   tags      String[] @default([])
   createdAt DateTime @default(now())
+  deletedAt DateTime?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

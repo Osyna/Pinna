@@ -210,12 +210,35 @@ function formatDate(ts) {
               </svg>
               {{ category?.name }}
             </div>
-            <button class="close-btn" @click="hapticTap(); $emit('close')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
+            <div class="hero-btns">
+              <button v-if="!readonly && !isEditing" class="hero-icon-btn" title="Edit place" @click="startEdit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button v-if="!readonly && !isEditing" class="hero-icon-btn danger" title="Delete place" @click="showDeleteConfirm = !showDeleteConfirm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
+              <button class="close-btn" @click="hapticTap(); $emit('close')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Delete confirmation (next to the buttons, not at the bottom) -->
+          <div v-if="showDeleteConfirm && !readonly" class="delete-confirm">
+            <p>Delete <strong>{{ place.name }}</strong>? You can recover it from Recently Deleted in My Places.</p>
+            <div class="confirm-btns">
+              <button class="btn-confirm-delete" @click="deletePlace">Yes, delete</button>
+              <button class="btn-confirm-cancel" @click="showDeleteConfirm = false">No, keep it</button>
+            </div>
           </div>
 
           <div class="place-name-row">
@@ -386,32 +409,6 @@ function formatDate(ts) {
           </div>
         </div>
 
-        <!-- Bottom actions -->
-        <div v-if="!readonly" class="detail-actions">
-          <button class="btn-edit" @click="startEdit">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-            Edit
-          </button>
-          <button class="btn-delete" @click="showDeleteConfirm = true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-            </svg>
-            Delete
-          </button>
-        </div>
-
-        <!-- Delete confirmation -->
-        <div v-if="showDeleteConfirm && !readonly" class="delete-confirm">
-          <p>Delete <strong>{{ place.name }}</strong>?</p>
-          <div class="confirm-btns">
-            <button class="btn-confirm-delete" @click="deletePlace">Yes, delete</button>
-            <button class="btn-confirm-cancel" @click="showDeleteConfirm = false">Cancel</button>
-          </div>
-        </div>
       </div>
 
       <!-- Edit mode -->
@@ -623,6 +620,30 @@ function formatDate(ts) {
   width: 7px;
   height: 7px;
   border-radius: 50%;
+}
+
+.hero-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.hero-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--text-secondary);
+  border-radius: 50%;
+  box-shadow: 0 1px 5px rgba(46, 33, 64, 0.10);
+
+  &.danger {
+    background: #fbe3e1;
+    color: #e8453c;
+  }
 }
 
 .close-btn {
@@ -1000,12 +1021,13 @@ function formatDate(ts) {
 
 /* Delete confirm */
 .delete-confirm {
-  margin: 0 22px 8px;
-  padding: 16px;
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.15);
-  border-radius: var(--radius);
+  margin: 10px 0 4px;
+  padding: 14px;
+  background: #fbe3e1;
+  border: none;
+  border-radius: 16px;
   text-align: center;
+  animation: ct-up 0.2s ease both;
 
   p {
     font-size: 14px;

@@ -152,6 +152,7 @@ const CUISINE_TYPES = [
 
 export const usePlacesStore = defineStore("pinna-places", () => {
   const places = shallowRef([])
+  const trashedPlaces = shallowRef([])
   const categories = ref([...DEFAULT_CATEGORIES])
   const loaded = ref(false)
   const selectedPlaceId = ref(null)
@@ -255,11 +256,37 @@ export const usePlacesStore = defineStore("pinna-places", () => {
 
   async function removePlace(id) {
     await api.delete(`/places/${id}`)
+    const removed = places.value.find(p => p.id === id)
     places.value = places.value.filter(p => p.id !== id)
+    if (removed) trashedPlaces.value = [{ ...removed, deletedAt: new Date().toISOString() }, ...trashedPlaces.value]
     if (selectedPlaceId.value === id) {
       selectedPlaceId.value = null
     }
-    showToast('Place deleted', { type: 'success' })
+    showToast('Moved to Recently Deleted', { type: 'success' })
+  }
+
+  async function fetchTrash() {
+    try {
+      const data = await api.get('/places/trash/list')
+      trashedPlaces.value = data.places
+    } catch { /* trash is best-effort */ }
+  }
+
+  async function restorePlace(id) {
+    await api.put(`/places/${id}/restore`, {})
+    const p = trashedPlaces.value.find(t => t.id === id)
+    trashedPlaces.value = trashedPlaces.value.filter(t => t.id !== id)
+    if (p) {
+      const { deletedAt, ...clean } = p
+      places.value = [clean, ...places.value]
+    }
+    showToast('Place restored', { type: 'success' })
+  }
+
+  async function purgePlace(id) {
+    await api.delete(`/places/${id}/permanent`)
+    trashedPlaces.value = trashedPlaces.value.filter(t => t.id !== id)
+    showToast('Deleted forever', { type: 'success' })
   }
 
   function selectPlace(id) {
@@ -388,6 +415,10 @@ export const usePlacesStore = defineStore("pinna-places", () => {
     addPlace,
     updatePlace,
     removePlace,
+    trashedPlaces,
+    fetchTrash,
+    restorePlace,
+    purgePlace,
     selectPlace,
     clearSelection,
     getCategoryById,

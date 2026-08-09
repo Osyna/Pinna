@@ -17,7 +17,7 @@ export default function placesRoutes(prisma) {
   router.get('/', async (req, res) => {
     try {
       const places = await prisma.place.findMany({
-        where: { userId: req.userId },
+        where: { userId: req.userId, deletedAt: null },
         orderBy: { createdAt: 'desc' },
       })
       res.json({ places })
@@ -136,6 +136,7 @@ export default function placesRoutes(prisma) {
     }
   })
 
+  // Soft delete: the place moves to "Recently Deleted" (recoverable)
   router.delete('/:id', async (req, res) => {
     try {
       const existing = await prisma.place.findFirst({
@@ -145,6 +146,61 @@ export default function placesRoutes(prisma) {
         return res.status(404).json({ error: 'Place not found' })
       }
 
+      await prisma.place.update({
+        where: { id: req.params.id },
+        data: { deletedAt: new Date() },
+      })
+      res.json({ success: true })
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to delete place' })
+    }
+  })
+
+  // Trash: list soft-deleted places (and purge anything older than 30 days)
+  router.get('/trash/list', async (req, res) => {
+    try {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      await prisma.place.deleteMany({
+        where: { userId: req.userId, deletedAt: { not: null, lt: cutoff } },
+      })
+      const places = await prisma.place.findMany({
+        where: { userId: req.userId, deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' },
+      })
+      res.json({ places })
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch deleted places' })
+    }
+  })
+
+  // Restore a soft-deleted place
+  router.put('/:id/restore', async (req, res) => {
+    try {
+      const existing = await prisma.place.findFirst({
+        where: { id: req.params.id, userId: req.userId, deletedAt: { not: null } },
+      })
+      if (!existing) {
+        return res.status(404).json({ error: 'Place not found' })
+      }
+      await prisma.place.update({
+        where: { id: req.params.id },
+        data: { deletedAt: null },
+      })
+      res.json({ success: true })
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to restore place' })
+    }
+  })
+
+  // Delete forever
+  router.delete('/:id/permanent', async (req, res) => {
+    try {
+      const existing = await prisma.place.findFirst({
+        where: { id: req.params.id, userId: req.userId },
+      })
+      if (!existing) {
+        return res.status(404).json({ error: 'Place not found' })
+      }
       await prisma.place.delete({ where: { id: req.params.id } })
       res.json({ success: true })
     } catch (err) {
