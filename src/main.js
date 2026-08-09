@@ -21,6 +21,8 @@ import '@ionic/vue/css/display.css'
 
 /* App styles (after Ionic, so we can override) */
 import './styles/main.scss'
+/* Cartoon game theme — the app's default look */
+import './styles/cartoon.scss'
 
 const app = createApp(App)
 app.use(createPinia())

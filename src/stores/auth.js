@@ -1,24 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api, setToken, setRefreshToken } from '../api.js'
-import { useTheme } from '../composables/useTheme'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const loading = ref(true)
-  const { setFromServer, setSaveCallback } = useTheme()
 
   const isAuthenticated = computed(() => !!user.value)
-
-  function syncTheme(userData) {
-    if (userData?.theme) setFromServer(userData.theme)
-  }
-
-  setSaveCallback((newTheme) => {
-    if (user.value) {
-      api.put('/auth/profile', { theme: newTheme }).catch(() => { })
-    }
-  })
 
   async function init() {
     const token = localStorage.getItem('pinna-token')
@@ -26,7 +14,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const data = await api.get('/auth/me')
       user.value = data.user
-      syncTheme(data.user)
     } catch {
       setToken(null)
       user.value = null
@@ -40,7 +27,6 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(data.token)
     setRefreshToken(data.refreshToken)
     user.value = data.user
-    syncTheme(data.user)
   }
 
   async function register(email, password, name, handle) {
@@ -48,7 +34,6 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(data.token)
     setRefreshToken(data.refreshToken)
     user.value = data.user
-    syncTheme(data.user)
   }
 
   async function checkHandle(handle) {
