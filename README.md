@@ -22,6 +22,7 @@ You can try the live demo at: **[maps.osyna.com](https://maps.osyna.com)**
 - **Import/Export** - Export all saved places to JSON, import from file.
 - **Local Storage** - All data stored in browser localStorage or synced with a backend.
 - **Dark Theme** - Modern, sleek dark UI designed for better visibility.
+- **Cartoon Mode** - A playful, cartoon-game skin (chunky ink outlines, cream paper, Baloo 2 headings). Toggle it in Profile → Settings.
 
 ## Screenshots
 

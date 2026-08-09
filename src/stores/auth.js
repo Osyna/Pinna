@@ -6,17 +6,24 @@ import { useTheme } from '../composables/useTheme'
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const loading = ref(true)
-  const { setFromServer, setSaveCallback } = useTheme()
+  const { setFromServer, setSkinFromServer, setSaveCallback, setSkinSaveCallback } = useTheme()
 
   const isAuthenticated = computed(() => !!user.value)
 
   function syncTheme(userData) {
     if (userData?.theme) setFromServer(userData.theme)
+    if (userData?.skin) setSkinFromServer(userData.skin)
   }
 
   setSaveCallback((newTheme) => {
     if (user.value) {
       api.put('/auth/profile', { theme: newTheme }).catch(() => { })
+    }
+  })
+
+  setSkinSaveCallback((newSkin) => {
+    if (user.value) {
+      api.put('/auth/profile', { skin: newSkin }).catch(() => { })
     }
   })
 

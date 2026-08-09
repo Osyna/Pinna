@@ -27,7 +27,7 @@ function isValidEmail(email) {
 
 const USER_SELECT = {
   id: true, email: true, name: true, handle: true, bio: true,
-  country: true, favoriteCuisines: true, favoritePlaceIds: true, theme: true, createdAt: true,
+  country: true, favoriteCuisines: true, favoritePlaceIds: true, theme: true, skin: true, createdAt: true,
 }
 
 function generateHandle(name, email) {
@@ -133,7 +133,7 @@ export default function authRoutes(prisma) {
 
   router.put('/profile', writeLimiter, authenticate, async (req, res) => {
     try {
-      const { name, bio, country, favoriteCuisines, favoritePlaceIds, currentPassword, newPassword, handle, theme } = req.body
+      const { name, bio, country, favoriteCuisines, favoritePlaceIds, currentPassword, newPassword, handle, theme, skin } = req.body
       const updates = {}
 
       if (name !== undefined) updates.name = name
@@ -142,6 +142,7 @@ export default function authRoutes(prisma) {
       if (favoriteCuisines !== undefined) updates.favoriteCuisines = favoriteCuisines
       if (favoritePlaceIds !== undefined) updates.favoritePlaceIds = favoritePlaceIds
       if (theme === 'dark' || theme === 'light') updates.theme = theme
+      if (skin === 'classic' || skin === 'cartoon') updates.skin = skin
 
       if (handle !== undefined) {
         if (!validateHandle(handle)) {
