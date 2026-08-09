@@ -20,6 +20,7 @@ export const CATEGORY_ICON_PATHS = {
   museum: 'M3.5 9 12 4.2 20.5 9ZM6.5 9v8.5M12 9v8.5M17.5 9v8.5M4 20.5h16',
   bed: 'M3 19v-9M3 13.5h11.5a4.5 4.5 0 0 1 4.5 4.5v1M7.5 7.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4M2 19h20',
   pin: 'M12 21s6-5.6 6-10a6 6 0 1 0-12 0c0 4.4 6 10 6 10ZM12 8.8a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4',
+  cross: 'M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6Z',
 }
 
 export function iconPathFor(iconName) {

@@ -6,6 +6,7 @@ import { useLinkPreview } from '../composables/useLinkPreview'
 import { hapticTap } from '../composables/useHaptics'
 import { api } from '../api.js'
 import { ACCENT } from '../theme'
+import { iconPathFor } from '../categoryIcons'
 
 const props = defineProps({
   placeId: { type: String, default: null },
@@ -204,7 +205,9 @@ function formatDate(ts) {
         <div class="hero-content">
           <div class="hero-top">
             <div class="cat-pill" :style="{ background: (category?.color || ACCENT) + '25', color: category?.color }">
-              <span class="cat-dot" :style="{ background: category?.color }"></span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="iconPathFor(category?.icon)" />
+              </svg>
               {{ category?.name }}
             </div>
             <button class="close-btn" @click="hapticTap(); $emit('close')">
@@ -215,7 +218,14 @@ function formatDate(ts) {
             </button>
           </div>
 
-          <h2 class="place-name">{{ place.name }}</h2>
+          <div class="place-name-row">
+            <span class="place-cat-icon" :style="{ background: (category?.color || ACCENT) + '22', color: category?.color || ACCENT }">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="iconPathFor(category?.icon)" />
+              </svg>
+            </span>
+            <h2 class="place-name">{{ place.name }}</h2>
+          </div>
 
           <!-- Rating -->
           <div v-if="place.rating" class="place-rating">
@@ -632,12 +642,32 @@ function formatDate(ts) {
   }
 }
 
+.place-name-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 8px;
+}
+
+.place-cat-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 2.5px solid #2e2140;
+
+  svg { display: block; }
+}
+
 .place-name {
   font-size: 24px;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.02em;
-  margin-bottom: 8px;
+  min-width: 0;
 }
 
 .place-rating {

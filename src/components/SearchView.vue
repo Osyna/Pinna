@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { usePlacesStore } from '../stores/places'
 import { useFriendsStore } from '../stores/friends'
 import { useGeocoding } from '../composables/useGeocoding'
+import { iconPathFor } from '../categoryIcons'
 import { useFuseSearch } from '../composables/useFuseSearch'
 import { useUserLocation } from '../composables/useUserLocation'
 import { useRecentSearches } from '../composables/useRecentSearches'
@@ -27,15 +28,20 @@ const cityFilter = ref('')
 let debounceTimer = null
 let cityDebounceTimer = null
 
+/* Desktop: let the mouse wheel scroll horizontal chip rows */
+function onChipRowWheel(e) {
+  e.currentTarget.scrollLeft += (e.deltaY || 0) + (e.deltaX || 0)
+}
+
 const PLACE_FILTERS = [
-  { key: 'restaurant', label: 'Restaurant' },
-  { key: 'cafe', label: 'Cafe' },
-  { key: 'bar', label: 'Bar' },
-  { key: 'hotel', label: 'Hotel' },
-  { key: 'shop', label: 'Shop' },
-  { key: 'museum', label: 'Museum' },
-  { key: 'park', label: 'Park' },
-  { key: 'pharmacy', label: 'Pharmacy' },
+  { key: 'restaurant', label: 'Restaurant', icon: 'utensils', color: '#FF3B30' },
+  { key: 'cafe', label: 'Cafe', icon: 'coffee', color: '#FF9500' },
+  { key: 'bar', label: 'Bar', icon: 'glass', color: '#AF52DE' },
+  { key: 'hotel', label: 'Hotel', icon: 'bed', color: '#30B0C7' },
+  { key: 'shop', label: 'Shop', icon: 'bag', color: '#FF66CC' },
+  { key: 'museum', label: 'Museum', icon: 'museum', color: '#007AFF' },
+  { key: 'park', label: 'Park', icon: 'tree', color: '#34C759' },
+  { key: 'pharmacy', label: 'Pharmacy', icon: 'cross', color: '#38c172' },
 ]
 
 const COUNTRIES = [
@@ -319,12 +325,15 @@ function getCatStyle(catId) {
     </div>
 
     <!-- Type filter chips -->
-    <div class="sv-filters">
+    <div class="sv-filters" @wheel.prevent="onChipRowWheel">
       <button
         v-for="f in PLACE_FILTERS" :key="f.key"
         :class="['sv-filter-chip', { active: activeFilter === f.key }]"
         @click="toggleFilter(f.key)"
       >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" :stroke="f.color" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path :d="iconPathFor(f.icon)" />
+        </svg>
         {{ f.label }}
       </button>
     </div>
@@ -749,7 +758,12 @@ function getCatStyle(catId) {
 
 .sv-filter-chip {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 5px 14px;
+
+  svg { flex-shrink: 0; }
   font-size: 12px;
   border-radius: 20px;
   background: var(--bg-glass-light);

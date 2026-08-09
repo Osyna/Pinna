@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { usePlacesStore } from '../stores/places'
+import { iconPathFor } from '../categoryIcons'
 import { useFriendsStore } from '../stores/friends'
 import { useFuseSearch } from '../composables/useFuseSearch'
 import { useUserLocation } from '../composables/useUserLocation'
@@ -17,6 +18,11 @@ const activePlaces = computed(() => friendsStore.viewingFriendId ? friendsStore.
 const { search: fuseSearch } = useFuseSearch(activePlaces)
 
 const search = ref('')
+
+/* Desktop: let the mouse wheel scroll horizontal chip rows */
+function onChipRowWheel(e) {
+  e.currentTarget.scrollLeft += (e.deltaY || 0) + (e.deltaX || 0)
+}
 const activeCategory = ref(null)
 onMounted(() => {
   if (userLat.value == null) locate().catch(() => {})
@@ -184,16 +190,19 @@ function contextAction(action) {
     </div>
 
     <!-- Category chips -->
-    <div class="pv-cats">
+    <div class="pv-cats" @wheel.prevent="onChipRowWheel">
       <button :class="['pv-chip', { active: !activeCategory }]" @click="activeCategory = null">
         All ({{ activePlaceCount }})
       </button>
       <button
         v-for="cat in activeCategories" :key="cat.id"
         :class="['pv-chip', { active: activeCategory === cat.id }]"
-        :style="activeCategory === cat.id ? { background: cat.color + '25', color: cat.color, borderColor: cat.color + '40' } : {}"
+        :style="activeCategory === cat.id ? { background: cat.color + '22' } : {}"
         @click="activeCategory = activeCategory === cat.id ? null : cat.id"
       >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" :stroke="cat.color" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path :d="iconPathFor(cat.icon)" />
+        </svg>
         {{ cat.name }} ({{ activeCategoryCounts[cat.id] || 0 }})
       </button>
     </div>
@@ -230,7 +239,11 @@ function contextAction(action) {
         @touchcancel="onCardPressEnd"
       >
         <div class="pv-card-left">
-          <span class="pv-cat-dot" :style="{ background: getCat(place.category).color }"></span>
+          <span class="pv-cat-icon" :style="{ background: getCat(place.category).color + '22', color: getCat(place.category).color }">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path :d="iconPathFor(getCat(place.category).icon)" />
+            </svg>
+          </span>
         </div>
         <div class="pv-card-body">
           <div class="pv-card-top">
@@ -400,7 +413,12 @@ function contextAction(action) {
 
 .pv-chip {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 14px;
+
+  svg { flex-shrink: 0; }
   font-size: 12px;
   border-radius: 20px;
   background: var(--bg-glass-light);
@@ -469,6 +487,18 @@ function contextAction(action) {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+}
+
+.pv-cat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 2px solid #2e2140;
+
+  svg { display: block; }
 }
 
 .pv-card-body {
