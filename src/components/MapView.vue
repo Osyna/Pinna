@@ -191,30 +191,9 @@ function metersToPixels(meters, lat, zoom) {
 /* ─── Layer setup (called on load + after style switch) ─── */
 function setupCustomLayers() {
   const nearbyColor = theme.value === 'light' ? '#0891b2' : '#22d3ee'
-  const borderOpacity = (currentLayer.value === 'satellite') ? 0.6 : (theme.value === 'light' ? 0.35 : 0.45)
-
-  // Country borders overlay
-  map.addSource('country-boundaries', {
-    type: 'vector',
-    tiles: ['https://demotiles.maplibre.org/tiles/{z}/{x}/{y}.pbf'],
-    maxzoom: 4,
-  })
-  map.addLayer({
-    id: 'country-border-lines',
-    type: 'line',
-    source: 'country-boundaries',
-    'source-layer': 'countries',
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round',
-    },
-    paint: {
-      'line-color': `${ACCENT}50`,
-      'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.4, 3, 1, 6, 1.5],
-      'line-opacity': borderOpacity,
-      'line-blur': 0.5,
-    },
-  })
+  // (The old country-border overlay from demotiles.maplibre.org was removed:
+  // it doubled the basemap's own boundaries with aliased purple lines and
+  // added an unreliable external tile dependency.)
 
   // Sources — places & nearby use clustering
   map.addSource('places', {
@@ -731,10 +710,6 @@ function updateLayerColors() {
   if (map.getLayer('nearby-clusters')) {
     map.setPaintProperty('nearby-clusters', 'circle-color', nearbyColor)
   }
-  if (map.getLayer('country-border-lines')) {
-    const borderOpacity = (currentLayer.value === 'satellite') ? 0.6 : (theme.value === 'light' ? 0.35 : 0.45)
-    map.setPaintProperty('country-border-lines', 'line-opacity', borderOpacity)
-  }
 }
 
 /* ─── Public API ─── */
@@ -1124,9 +1099,11 @@ watch(theme, (newTheme) => {
     <!-- Right-side controls — vertically centered -->
     <div class="right-controls" :class="{ 'build-anim build-anim--slide-right build-anim--delay-3': splashFinished }">
       <button :class="['rc-btn', { active: locating || userLat != null }]" @click="locateMe" title="My location" aria-label="My location">
-        <svg v-if="!locating" width="18" height="18" viewBox="0 0 24 24" fill="none"
-          :stroke="userLat != null ? 'var(--accent)' : 'currentColor'" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3m-10-10h3m14 0h3"/>
+        <svg v-if="!locating" width="18" height="18" viewBox="0 0 24 24"
+          :fill="userLat != null ? 'var(--accent)' : 'none'"
+          :stroke="userLat != null ? 'var(--accent)' : 'currentColor'"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 11l19-9-9 19-2-8-8-2z"/>
         </svg>
         <div v-else class="btn-spin"></div>
       </button>

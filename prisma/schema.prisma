@@ -49,6 +49,16 @@ model ListPlace {
   @@id([listId, placeId])
 }
 
+model GeoCache {
+  key       String   @id
+  status    Int      @default(200)
+  body      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
 model Friendship {
   id         String   @id @default(uuid())
   status     String   @default("pending")
