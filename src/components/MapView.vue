@@ -13,7 +13,7 @@ import { useUserLocation } from '../composables/useUserLocation'
 import { useTheme } from '../composables/useTheme'
 import { hapticTap } from '../composables/useHaptics'
 import { ACCENT } from '../theme'
-import { iconPathFor, categoryIconSvg, markerImageId, drawMarkerImage } from '../categoryIcons'
+import { iconPathFor, categoryIconSvg, markerImageId, drawMarkerImage, amenityStyle, nearbyImageId } from '../categoryIcons'
 
 const props = defineProps({
   splashFinished: Boolean
@@ -275,19 +275,18 @@ function setupCustomLayers() {
     paint: { 'text-color': '#ffffff' },
   })
 
-  // Nearby individual circles (exclude clusters)
+  // Nearby individual markers (exclude clusters): dashed-ring icon discs —
+  // same type colors as saved places, dotted outline = "not saved yet"
   map.addLayer({
     id: 'nearby-circles',
-    type: 'circle',
+    type: 'symbol',
     source: 'nearby',
     filter: ['!', ['has', 'point_count']],
-    paint: {
-      'circle-radius': 6,
-      'circle-color': nearbyColor,
-      'circle-stroke-width': 1.5,
-      'circle-stroke-color': 'rgba(255, 255, 255, 0.7)',
-      'circle-opacity': 0.8,
-      'circle-stroke-opacity': 0.8,
+    layout: {
+      'icon-image': ['get', 'iconId'],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.8, 15, 1],
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
     },
   })
 
@@ -443,7 +442,7 @@ function setupClickHandlers() {
     const html = `
       <div class="place-preview nearby">
         <div class="pp-header">
-          <span class="pp-nearby-dot"></span>
+          <span class="pp-cat-icon nearby" style="color:${amenityStyle(props.amenity).color};border-color:${amenityStyle(props.amenity).color}">${categoryIconSvg(amenityStyle(props.amenity).icon, { size: 13 })}</span>
           <span class="pp-name">${props.name}</span>
         </div>
         <div class="pp-meta">
@@ -546,6 +545,7 @@ function renderNearbyMarkers() {
         lat: place.lat,
         lng: place.lng,
         amenity: place.amenity,
+        iconId: nearbyImageId(place.amenity),
         cuisine: place.cuisine || '',
         address: place.address || '',
       },
@@ -728,9 +728,6 @@ function switchTileLayer(name) {
 function updateLayerColors() {
   if (!map) return
   const nearbyColor = theme.value === 'light' ? '#0891b2' : '#22d3ee'
-  if (map.getLayer('nearby-circles')) {
-    map.setPaintProperty('nearby-circles', 'circle-color', nearbyColor)
-  }
   if (map.getLayer('nearby-clusters')) {
     map.setPaintProperty('nearby-clusters', 'circle-color', nearbyColor)
   }
@@ -971,10 +968,16 @@ onMounted(() => {
   // Category marker icons are generated lazily (and re-generated after every
   // style switch, which wipes images): white disc + ink outline + colored icon.
   map.on('styleimagemissing', (e) => {
-    if (!e.id.startsWith('cat-marker|') || map.hasImage(e.id)) return
-    const [, icon, color] = e.id.split('|')
-    const { imageData, pixelRatio } = drawMarkerImage(icon, color)
-    map.addImage(e.id, imageData, { pixelRatio })
+    if (map.hasImage(e.id)) return
+    if (e.id.startsWith('cat-marker|')) {
+      const [, icon, color] = e.id.split('|')
+      const { imageData, pixelRatio } = drawMarkerImage(icon, color)
+      map.addImage(e.id, imageData, { pixelRatio })
+    } else if (e.id.startsWith('nearby-marker|')) {
+      const [, icon, color] = e.id.split('|')
+      const { imageData, pixelRatio } = drawMarkerImage(icon, color, { size: 30, dashed: true })
+      map.addImage(e.id, imageData, { pixelRatio })
+    }
   })
 
   map.on('load', () => {
