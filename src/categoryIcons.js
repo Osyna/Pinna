@@ -32,6 +32,30 @@ export function categoryIconSvg(iconName, { size = 15, strokeWidth = 2.6 } = {})
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"><path d="${iconPathFor(iconName)}"></path></svg>`
 }
 
+/* OSM amenity -> icon + color (same palette as saved categories) */
+export const AMENITY_STYLE = {
+  restaurant: { icon: 'utensils', color: '#FF3B30' },
+  bar: { icon: 'glass', color: '#AF52DE' },
+  pub: { icon: 'glass', color: '#AF52DE' },
+  biergarten: { icon: 'glass', color: '#AF52DE' },
+  cafe: { icon: 'coffee', color: '#FF9500' },
+  fast_food: { icon: 'burger', color: '#FFCC00' },
+  food_court: { icon: 'burger', color: '#FFCC00' },
+  ice_cream: { icon: 'brunch', color: '#FF2D55' },
+  bakery: { icon: 'bread', color: '#A0522D' },
+  nightclub: { icon: 'music', color: '#5856D6' },
+}
+
+export function amenityStyle(amenity) {
+  return AMENITY_STYLE[amenity] || { icon: 'pin', color: '#8E8E93' }
+}
+
+/* MapLibre image id for an unsaved nearby place (dashed ring) */
+export function nearbyImageId(amenity) {
+  const { icon, color } = amenityStyle(amenity)
+  return `nearby-marker|${icon}|${color}`
+}
+
 /* Stable MapLibre image id for a category (icon + color are both encoded,
    so custom categories that share an icon but differ in color still get
    their own image). */
@@ -39,9 +63,11 @@ export function markerImageId(cat) {
   return `cat-marker|${cat?.icon || 'pin'}|${cat?.color || '#8E8E93'}`
 }
 
-/* Draw a cartoon map marker: white disc, ink outline, colored icon.
+/* Draw a cartoon map marker: white disc, soft ring, colored icon.
+   `dashed: true` renders the ring dotted — used for places that are
+   found nearby but NOT saved yet.
    Returns ImageData + pixelRatio, ready for map.addImage(). */
-export function drawMarkerImage(iconName, color, { size = 34, pixelRatio = 2 } = {}) {
+export function drawMarkerImage(iconName, color, { size = 34, pixelRatio = 2, dashed = false } = {}) {
   const px = size * pixelRatio
   const canvas = document.createElement('canvas')
   canvas.width = px
@@ -60,9 +86,18 @@ export function drawMarkerImage(iconName, color, { size = 34, pixelRatio = 2 } =
   ctx.shadowColor = 'transparent'
   ctx.shadowBlur = 0
   ctx.shadowOffsetY = 0
-  ctx.lineWidth = 1.6 * pixelRatio
-  ctx.strokeStyle = 'rgba(46, 33, 64, 0.30)'
-  ctx.stroke()
+  if (dashed) {
+    // dotted ring in the type color: "found nearby, not saved yet"
+    ctx.setLineDash([3.2 * pixelRatio, 2.6 * pixelRatio])
+    ctx.lineWidth = 1.9 * pixelRatio
+    ctx.strokeStyle = color
+    ctx.stroke()
+    ctx.setLineDash([])
+  } else {
+    ctx.lineWidth = 1.6 * pixelRatio
+    ctx.strokeStyle = 'rgba(46, 33, 64, 0.30)'
+    ctx.stroke()
+  }
 
   // Icon, centered (24-unit viewBox)
   const span = size * 0.56 * pixelRatio

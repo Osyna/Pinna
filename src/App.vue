@@ -209,26 +209,26 @@ function onSplashFinish() {
       <!-- Bottom tab bar -->
       <div v-if="!showSplash" class="bottom-tabs line-anim">
         <div class="tab-indicator" :style="tabIndicatorStyle"></div>
-        <button :class="['tab-btn', { active: activeTab === 'map' && !friendsStore.viewingFriendId }, { 'build-anim build-anim--slide build-anim--delay-1': splashFinished }]" aria-label="Map" @click="switchTab('map')">
+        <button :class="['tab-btn', 'tab--map', { active: activeTab === 'map' && !friendsStore.viewingFriendId }, { 'build-anim build-anim--slide build-anim--delay-1': splashFinished }]" aria-label="Map" @click="switchTab('map')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
             <line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
           </svg>
           <span>Map</span>
         </button>
-        <button :class="['tab-btn', { active: activeTab === 'search' }, { 'build-anim build-anim--slide build-anim--delay-2': splashFinished }]" aria-label="Search" @click="switchTab('search')">
+        <button :class="['tab-btn', 'tab--search', { active: activeTab === 'search' }, { 'build-anim build-anim--slide build-anim--delay-2': splashFinished }]" aria-label="Search" @click="switchTab('search')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <span>Search</span>
         </button>
-        <button :class="['tab-btn', { active: activeTab === 'places' }, { 'build-anim build-anim--slide build-anim--delay-3': splashFinished }]" aria-label="My Places" @click="switchTab('places')">
+        <button :class="['tab-btn', 'tab--places', { active: activeTab === 'places' }, { 'build-anim build-anim--slide build-anim--delay-3': splashFinished }]" aria-label="My Places" @click="switchTab('places')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
           </svg>
           <span>Places</span>
         </button>
-        <button :class="['tab-btn', { active: activeTab === 'friends' || friendsStore.viewingFriendId }, { 'build-anim build-anim--slide build-anim--delay-4': splashFinished }]" aria-label="Friends" @click="switchTab('friends')" style="position: relative">
+        <button :class="['tab-btn', 'tab--friends', { active: activeTab === 'friends' || friendsStore.viewingFriendId }, { 'build-anim build-anim--slide build-anim--delay-4': splashFinished }]" aria-label="Friends" @click="switchTab('friends')" style="position: relative">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
@@ -238,7 +238,7 @@ function onSplashFinish() {
           <span>Friends</span>
           <span v-if="friendsStore.pendingCount > 0" class="tab-badge">{{ friendsStore.pendingCount }}</span>
         </button>
-        <button :class="['tab-btn', { active: activeTab === 'profile' }, { 'build-anim build-anim--slide build-anim--delay-4': splashFinished }]" aria-label="Profile" @click="switchTab('profile')">
+        <button :class="['tab-btn', 'tab--profile', { active: activeTab === 'profile' }, { 'build-anim build-anim--slide build-anim--delay-4': splashFinished }]" aria-label="Profile" @click="switchTab('profile')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>

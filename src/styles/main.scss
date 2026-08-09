@@ -331,6 +331,13 @@ select {
   justify-content: center;
 
   svg { display: block; }
+
+  /* nearby (unsaved) variant: dotted outline in the type color */
+  &.nearby {
+    border-radius: 50%;
+    border-style: dashed;
+    border-width: 2px;
+  }
 }
 
 .pp-nearby-dot {

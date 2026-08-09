@@ -251,9 +251,16 @@ function getCatStyle(catId) {
     </div>
 
     <!-- Header -->
-    <div :class="['sv-header', { collapsed: scrolled }]">
-      <h1 class="sv-title">Discover</h1>
-      <span class="sv-subtitle">Find new places on OpenStreetMap</span>
+    <div :class="['sv-header', 'view-hero', 'hero--search', { collapsed: scrolled }]">
+      <span class="view-hero-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </span>
+      <div class="view-hero-text">
+        <h1 class="sv-title">Discover</h1>
+        <span class="sv-subtitle">Find new places on OpenStreetMap</span>
+      </div>
     </div>
 
     <!-- Search input -->
