@@ -30,3 +30,12 @@ gunzip -c backups/pinna-XXXX.sql.gz | psql "$DATABASE_URL"
 - Never point `prisma migrate diff/dev --shadow-database-url` at a real database —
   Prisma **resets** shadow databases. Use a throwaway local container instead.
 - Take a manual backup before any schema change: `./scripts/db-backup.sh`.
+
+## Current automated setup (active since 2026-02)
+
+- `scripts/db-backup-push.sh` runs **daily at 03:00** via cron on the dev machine:
+  dump → `backups/` (local, keeps 30) → `~/Backups/pinna` → pushed to the
+  **private** repo `Osyna/pinna-db-backups` (keeps 60 snapshots off-site).
+- Verified restore path: `gunzip -c pinna-*.sql.gz | psql "$DATABASE_URL"`.
+- Recommended upgrade when available: S3 destination in Dokploy for
+  server-side scheduled backups independent of the dev machine.
