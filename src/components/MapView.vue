@@ -1099,9 +1099,11 @@ watch(theme, (newTheme) => {
     <!-- Right-side controls — vertically centered -->
     <div class="right-controls" :class="{ 'build-anim build-anim--slide-right build-anim--delay-3': splashFinished }">
       <button :class="['rc-btn', { active: locating || userLat != null }]" @click="locateMe" title="My location" aria-label="My location">
-        <svg v-if="!locating" width="18" height="18" viewBox="0 0 24 24" fill="none"
-          :stroke="userLat != null ? 'var(--accent)' : 'currentColor'" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3m-10-10h3m14 0h3"/>
+        <svg v-if="!locating" width="18" height="18" viewBox="0 0 24 24"
+          :fill="userLat != null ? 'var(--accent)' : 'none'"
+          :stroke="userLat != null ? 'var(--accent)' : 'currentColor'"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 11l19-9-9 19-2-8-8-2z"/>
         </svg>
         <div v-else class="btn-spin"></div>
       </button>

@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { authHeader } from '../api.js'
 
 // Proxied through our server (caching + rate limits)
-const OVERPASS_API = '/api/geo/overpass'
+const OVERPASS_API = '/api/geo/nearby'
 
 export function useNearby() {
   const nearbyPlaces = ref([])
@@ -19,18 +19,12 @@ export function useNearby() {
     const north = bounds.getNorth()
     const east = bounds.getEast()
 
-    const query = `
-      [out:json][timeout:15];
-      (
-        node["amenity"~"restaurant|bar|cafe|pub|fast_food|biergarten|food_court|ice_cream|bakery|nightclub"](${south},${west},${north},${east});
-      );
-      out body 80;
-    `
-
     try {
+      // Structured bbox: the server snaps it to a shared cell grid, so
+      // everyone's searches build one collective, self-refreshing cache
       const response = await fetch(OVERPASS_API, {
         method: 'POST',
-        body: JSON.stringify({ data: query }),
+        body: JSON.stringify({ south, west, north, east }),
         headers: { 'Content-Type': 'application/json', ...authHeader() },
       })
 

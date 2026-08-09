@@ -8,7 +8,7 @@ third-party rate limits. Status legend: ✅ done · 🔜 next · 🎯 later.
 | Service | Today | Next steps |
 |---|---|---|
 | Nominatim (search) | ✅ auth-gated proxy, per-user rate limit, L1 memory + **L2 Postgres cache (survives restarts, shared by replicas)** | 🔜 request queue (1 rps global toward upstream, jittered retry on 429) · 🎯 self-host **Photon** (typo-tolerant, no limits) |
-| Overpass (nearby) | ✅ proxied + cached (10 min TTL) | 🔜 **quantize bboxes to a tile grid** so nearby cache hits multiply across users/pans · 🔜 mirror rotation (overpass.kumi.systems fallback on 429/504) |
+| Overpass (nearby) | ✅ proxied · ✅ **grid-quantized shared cell cache** (`/api/geo/nearby`): pans/users reuse cells, repeat views are 100% cache · ✅ stale-while-revalidate freshness (fresh <24 h, stale served instantly + background refetch, hard expiry 14 d → closed/new places appear within a day of anyone viewing the area) · ✅ mirror rotation to overpass.kumi.systems on 429/5xx/timeouts | 🎯 pre-warm cells around users' saved areas |
 | OSRM (routing) | ✅ proxied + cached (1 h TTL) | 🎯 self-host `osrm-backend` with a regional extract (or Valhalla) on the Dokploy box |
 | Basemap tiles | client → CARTO/OSM/Esri, SW-cached on device (7 d, 2000 tiles) | 🎯 **Protomaps PMTiles**: one static file self-hosted behind the CDN = zero tile rate limits, offline-friendly, custom cartoon style |
 

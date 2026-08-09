@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { authenticate } from '../middleware/auth.js'
+import { cellsForBbox, buildCellQuery, mergeElements } from '../lib/overpassGrid.js'
 
 /**
  * Server-side proxy for the public geo services (Nominatim, Overpass, OSRM)
@@ -13,7 +14,11 @@ import { authenticate } from '../middleware/auth.js'
  */
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org'
-const OVERPASS = 'https://overpass-api.de/api/interpreter'
+const OVERPASS_MIRRORS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+]
+const OVERPASS = OVERPASS_MIRRORS[0]
 const OSRM = 'https://router.project-osrm.org/route/v1/driving'
 const UA = 'Pinna/1.0 (+https://maps.osyna.com)'
 
@@ -38,6 +43,74 @@ function cacheSet(key, ttl, status, body) {
 }
 
 let prismaRef = null
+
+/* ── Overpass cell layer: shared grid cache + stale-while-revalidate ── */
+const CELL_SOFT_TTL = 24 * 60 * 60 * 1000        // fresh: serve as-is
+const CELL_HARD_TTL = 14 * 24 * 60 * 60 * 1000   // stale beyond this: blocking refetch
+const cellRefreshing = new Set()
+
+async function fetchOverpass(query) {
+  let lastErr = null
+  for (const base of OVERPASS_MIRRORS) {
+    try {
+      const resp = await fetch(base, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA },
+        body: 'data=' + encodeURIComponent(query),
+        signal: AbortSignal.timeout(20000),
+      })
+      if (resp.status === 429 || resp.status >= 500) {
+        lastErr = new Error(`upstream ${resp.status}`)
+        continue // rotate to the next mirror
+      }
+      return resp
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  throw lastErr || new Error('all overpass mirrors failed')
+}
+
+async function cellGet(key) {
+  if (!prismaRef) return null
+  try {
+    const row = await prismaRef.geoCache.findUnique({ where: { key } })
+    if (!row) return null
+    const remaining = row.expiresAt.getTime() - Date.now()
+    if (remaining <= 0) return null
+    return {
+      elements: JSON.parse(row.body),
+      fresh: remaining > CELL_HARD_TTL - CELL_SOFT_TTL,
+    }
+  } catch { return null }
+}
+
+function cellPut(key, elements) {
+  if (!prismaRef) return
+  const data = {
+    status: 200,
+    body: JSON.stringify(elements),
+    expiresAt: new Date(Date.now() + CELL_HARD_TTL),
+  }
+  prismaRef.geoCache.upsert({ where: { key }, create: { key, ...data }, update: data }).catch(() => {})
+}
+
+async function fetchCell(cell) {
+  const resp = await fetchOverpass(buildCellQuery(cell.bbox))
+  if (!resp.ok) throw new Error(`overpass ${resp.status}`)
+  const data = await resp.json().catch(() => null)
+  const elements = data?.elements || []
+  cellPut(cell.key, elements)
+  return elements
+}
+
+function revalidateCell(cell) {
+  if (cellRefreshing.has(cell.key)) return
+  cellRefreshing.add(cell.key)
+  fetchCell(cell)
+    .catch(() => {})
+    .finally(() => cellRefreshing.delete(cell.key))
+}
 
 async function l2Get(key) {
   if (!prismaRef) return null
@@ -125,13 +198,50 @@ export default function geoRoutes(prisma = null) {
     if (!q || q.length > 4000) {
       return res.status(400).json({ error: 'Invalid query' })
     }
-    proxyJson(res, `overpass:${q}`, 10 * 60 * 1000, () =>
-      fetch(OVERPASS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA },
-        body: 'data=' + encodeURIComponent(q),
-      })
-    )
+    proxyJson(res, `overpass:${q}`, 10 * 60 * 1000, () => fetchOverpass(q))
+  })
+
+  // Nearby places by bbox — grid-quantized shared cache.
+  // Cells fresh (<24h) are served as-is; stale cells are served
+  // instantly and refreshed in the background (reality stays aligned:
+  // closed/new places appear within a day of anyone viewing the area);
+  // missing/expired cells are fetched now with mirror fallback.
+  router.post('/nearby', async (req, res) => {
+    const { south, west, north, east } = req.body || {}
+    if (![south, west, north, east].every(v => typeof v === 'number' && Number.isFinite(v))) {
+      return res.status(400).json({ error: 'Invalid bbox' })
+    }
+    if (north - south > 1 || east - west > 1 || north <= south || east <= west) {
+      return res.status(400).json({ error: 'Bbox too large' })
+    }
+    try {
+      const cells = cellsForBbox({ south, west, north, east })
+      const results = []
+      let freshN = 0, staleN = 0, missN = 0
+      const missing = []
+
+      for (const cell of cells) {
+        const hit = await cellGet(cell.key)
+        if (hit) {
+          results.push(hit.elements)
+          if (hit.fresh) freshN++
+          else { staleN++; revalidateCell(cell) }
+        } else {
+          missing.push(cell)
+        }
+      }
+
+      const fetched = await Promise.allSettled(missing.map(c => fetchCell(c)))
+      for (const f of fetched) {
+        missN++
+        if (f.status === 'fulfilled') results.push(f.value)
+      }
+
+      res.set('X-Geo-Cells', `total=${cells.length} fresh=${freshN} stale=${staleN} miss=${missN}`)
+      res.json({ elements: mergeElements(results) })
+    } catch {
+      res.status(502).json({ error: 'Geo service unavailable' })
+    }
   })
 
   // OSRM: /api/geo/route/lng,lat;lng,lat?overview=full...
