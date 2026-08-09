@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { usePlacesStore } from '../stores/places'
+import { iconPathFor } from '../categoryIcons'
 import { useFriendsStore } from '../stores/friends'
 import { useFuseSearch } from '../composables/useFuseSearch'
 import { useUserLocation } from '../composables/useUserLocation'
@@ -17,16 +18,104 @@ const activePlaces = computed(() => friendsStore.viewingFriendId ? friendsStore.
 const { search: fuseSearch } = useFuseSearch(activePlaces)
 
 const search = ref('')
+
+/* Desktop: let the mouse wheel scroll horizontal chip rows */
+function onChipRowWheel(e) {
+  e.currentTarget.scrollLeft += (e.deltaY || 0) + (e.deltaX || 0)
+}
+
+/* ── Recently Deleted ── */
+const showTrash = ref(false)
+const purgeConfirmId = ref(null)
+
+function toggleTrash() {
+  showTrash.value = !showTrash.value
+  if (showTrash.value) store.fetchTrash()
+}
+
+async function doPurge(id) {
+  await store.purgePlace(id)
+  purgeConfirmId.value = null
+}
+
+function trashDate(d) {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 const activeCategory = ref(null)
 onMounted(() => {
   if (userLat.value == null) locate().catch(() => {})
+  if (!friendsStore.viewingFriendId) store.fetchTrash()
 })
+
+/* ── Lists (collections) ── */
+const activeList = ref(null)
+const newListMode = ref(false)
+const newListName = ref('')
+
+async function submitNewList() {
+  const name = newListName.value.trim()
+  newListMode.value = false
+  newListName.value = ''
+  if (!name) return
+  const list = await store.createList(name).catch(() => null)
+  if (list) activeList.value = list.id
+}
+
+async function removeList(id) {
+  await store.deleteList(id).catch(() => {})
+  if (activeList.value === id) activeList.value = null
+}
+
+/* ── Bulk selection ── */
+const selectMode = ref(false)
+const selectedIds = ref(new Set())
+const showBulkCats = ref(false)
+
+function toggleSelectMode() {
+  selectMode.value = !selectMode.value
+  selectedIds.value = new Set()
+  showBulkCats.value = false
+}
+
+function toggleSelected(id) {
+  const s = new Set(selectedIds.value)
+  s.has(id) ? s.delete(id) : s.add(id)
+  selectedIds.value = s
+}
+
+async function bulkDeleteSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  await store.bulkDelete(ids)
+  toggleSelectMode()
+}
+
+async function bulkMoveSelected(catId) {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  await store.bulkSetCategory(ids, catId)
+  toggleSelectMode()
+}
+
+function onCardClick(place) {
+  if (selectMode.value) toggleSelected(place.id)
+  else emit('show-detail', place)
+}
 
 const sortedPlaces = computed(() => {
   let result = activePlaces.value
 
   if (activeCategory.value) {
     result = result.filter(p => p.category === activeCategory.value)
+  }
+
+  if (activeList.value) {
+    const list = store.lists.find(l => l.id === activeList.value)
+    if (list) {
+      const inList = new Set(list.placeIds)
+      result = result.filter(p => inList.has(p.id))
+    }
   }
 
   if (search.value.trim()) {
@@ -168,6 +257,9 @@ function contextAction(action) {
     <div class="pv-header">
       <h1 class="pv-title">{{ friendsStore.viewingFriendId ? (friendsStore.viewingFriendInfo?.name?.split(' ')[0] || 'Friend') + "'s Places" : 'My Places' }}</h1>
       <span class="pv-count">{{ activePlaceCount }} saved</span>
+      <button v-if="!friendsStore.viewingFriendId" class="pv-select-btn" :class="{ on: selectMode }" @click="toggleSelectMode">
+        {{ selectMode ? 'Cancel' : 'Select' }}
+      </button>
     </div>
 
     <!-- Search -->
@@ -176,7 +268,7 @@ function contextAction(action) {
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
       <input v-model="search" type="text" :placeholder="friendsStore.viewingFriendId ? 'Search their places...' : 'Search your places...'" class="pv-search" autocomplete="off" />
-      <button v-if="search" class="pv-search-clear" @click="search = ''">
+      <button v-if="search" class="pv-search-clear" aria-label="Clear search" @click="search = ''">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -184,17 +276,62 @@ function contextAction(action) {
     </div>
 
     <!-- Category chips -->
-    <div class="pv-cats">
+    <div class="pv-cats" @wheel.prevent="onChipRowWheel">
       <button :class="['pv-chip', { active: !activeCategory }]" @click="activeCategory = null">
         All ({{ activePlaceCount }})
       </button>
       <button
         v-for="cat in activeCategories" :key="cat.id"
         :class="['pv-chip', { active: activeCategory === cat.id }]"
-        :style="activeCategory === cat.id ? { background: cat.color + '25', color: cat.color, borderColor: cat.color + '40' } : {}"
+        :style="activeCategory === cat.id ? { background: cat.color + '22' } : {}"
         @click="activeCategory = activeCategory === cat.id ? null : cat.id"
       >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" :stroke="cat.color" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path :d="iconPathFor(cat.icon)" />
+        </svg>
         {{ cat.name }} ({{ activeCategoryCounts[cat.id] || 0 }})
+      </button>
+    </div>
+
+    <!-- Lists row -->
+    <div v-if="!friendsStore.viewingFriendId" class="pv-lists" @wheel.prevent="onChipRowWheel">
+      <button
+        v-for="l in store.lists" :key="l.id"
+        :class="['pv-list-chip', { active: activeList === l.id }]"
+        @click="activeList = activeList === l.id ? null : l.id"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        {{ l.name }} ({{ l.placeIds.length }})
+        <span v-if="activeList === l.id" class="pv-list-x" title="Delete list" @click.stop="removeList(l.id)">×</span>
+      </button>
+      <button v-if="!newListMode" class="pv-list-chip new" @click="newListMode = true">+ List</button>
+      <input
+        v-else
+        v-model="newListName"
+        class="pv-list-input"
+        placeholder="List name…"
+        autofocus
+        @keyup.enter="submitNewList"
+        @blur="submitNewList"
+      />
+    </div>
+
+    <!-- Bulk action bar -->
+    <div v-if="selectMode" class="pv-bulk-bar">
+      <span class="pv-bulk-count">{{ selectedIds.size }} selected</span>
+      <button class="pv-bulk-btn" :disabled="!selectedIds.size" @click="showBulkCats = !showBulkCats">Move to…</button>
+      <button class="pv-bulk-btn danger" :disabled="!selectedIds.size" @click="bulkDeleteSelected">Delete</button>
+    </div>
+    <div v-if="selectMode && showBulkCats" class="pv-bulk-cats" @wheel.prevent="onChipRowWheel">
+      <button
+        v-for="cat in activeCategories" :key="cat.id"
+        class="pv-chip"
+        @click="bulkMoveSelected(cat.id)"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" :stroke="cat.color" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path :d="iconPathFor(cat.icon)" />
+        </svg>
+        {{ cat.name }}
       </button>
     </div>
 
@@ -223,14 +360,21 @@ function contextAction(action) {
 
       <button
         v-for="place in sortedPlaces" :key="place.id"
-        class="pv-card contain-item"
-        @click="emit('show-detail', place)"
+        :class="['pv-card', 'contain-item', { selected: selectMode && selectedIds.has(place.id), selecting: selectMode }]"
+        @click="onCardClick(place)"
         @touchstart.passive="onCardPressStart($event, place)"
         @touchend="onCardPressEnd"
         @touchcancel="onCardPressEnd"
       >
+        <span v-if="selectMode" :class="['pv-check', { on: selectedIds.has(place.id) }]">
+          <svg v-if="selectedIds.has(place.id)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
         <div class="pv-card-left">
-          <span class="pv-cat-dot" :style="{ background: getCat(place.category).color }"></span>
+          <span class="pv-cat-icon" :style="{ background: getCat(place.category).color + '22', color: getCat(place.category).color }">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path :d="iconPathFor(getCat(place.category).icon)" />
+            </svg>
+          </span>
         </div>
         <div class="pv-card-body">
           <div class="pv-card-top">
@@ -253,6 +397,52 @@ function contextAction(action) {
           <polyline points="9 18 15 12 9 6"/>
         </svg>
       </button>
+
+      <!-- Recently Deleted -->
+      <div v-if="!friendsStore.viewingFriendId" class="pv-trash-section">
+        <button class="pv-trash-toggle" @click="toggleTrash">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+          <span>Recently Deleted</span>
+          <span v-if="store.trashedPlaces.length" class="pv-trash-count">{{ store.trashedPlaces.length }}</span>
+          <svg class="pv-trash-chevron" :style="{ transform: showTrash ? 'rotate(90deg)' : 'none' }" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+
+        <div v-if="showTrash" class="pv-trash-list">
+          <p v-if="!store.trashedPlaces.length" class="pv-trash-empty">
+            Nothing here — deleted places stay recoverable for 30 days.
+          </p>
+          <div v-for="p in store.trashedPlaces" :key="p.id" class="pv-trash-row">
+            <span class="pv-cat-icon small" :style="{ background: getCat(p.category).color + '22', color: getCat(p.category).color }">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="iconPathFor(getCat(p.category).icon)" />
+              </svg>
+            </span>
+            <div class="pv-trash-info">
+              <span class="pv-trash-name">{{ p.name }}</span>
+              <span class="pv-trash-date">deleted {{ trashDate(p.deletedAt) }}</span>
+            </div>
+            <template v-if="purgeConfirmId === p.id">
+              <span class="pv-trash-ask">Forever?</span>
+              <button class="pv-trash-btn danger" @click="doPurge(p.id)">Yes</button>
+              <button class="pv-trash-btn" @click="purgeConfirmId = null">No</button>
+            </template>
+            <template v-else>
+              <button class="pv-trash-btn restore" @click="store.restorePlace(p.id)">Restore</button>
+              <button class="pv-trash-btn danger icon" title="Delete forever" @click="purgeConfirmId = p.id">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Context menu overlay -->
@@ -400,7 +590,12 @@ function contextAction(action) {
 
 .pv-chip {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 14px;
+
+  svg { flex-shrink: 0; }
   font-size: 12px;
   border-radius: 20px;
   background: var(--bg-glass-light);
@@ -439,6 +634,7 @@ function contextAction(action) {
 
 /* Card */
 .pv-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -469,6 +665,24 @@ function contextAction(action) {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+}
+
+.pv-cat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+
+  svg { display: block; }
+
+  &.small {
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+    flex-shrink: 0;
+  }
 }
 
 .pv-card-body {

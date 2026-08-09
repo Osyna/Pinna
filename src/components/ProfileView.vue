@@ -264,7 +264,7 @@ async function removeAvatar() {
 
         <!-- Avatar: clickable only in edit mode -->
         <button v-if="editing" class="pf-avatar-wrap editable" @click="triggerAvatarUpload" :disabled="avatarUploading">
-          <img v-if="avatarUrl" :src="avatarUrl" class="pf-avatar-img" @load="avatarLoaded = true" @error="avatarLoaded = false" />
+          <img v-if="avatarUrl" v-show="avatarLoaded" :src="avatarUrl" class="pf-avatar-img" @load="avatarLoaded = true" @error="avatarLoaded = false" />
           <div v-if="!avatarLoaded" class="pf-avatar-fallback">{{ initial }}</div>
           <div class="pf-avatar-overlay" :class="{ uploading: avatarUploading }">
             <svg v-if="!avatarUploading" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
@@ -275,7 +275,7 @@ async function removeAvatar() {
           </div>
         </button>
         <div v-else class="pf-avatar-wrap">
-          <img v-if="avatarUrl" :src="avatarUrl" class="pf-avatar-img" @load="avatarLoaded = true" @error="avatarLoaded = false" />
+          <img v-if="avatarUrl" v-show="avatarLoaded" :src="avatarUrl" class="pf-avatar-img" @load="avatarLoaded = true" @error="avatarLoaded = false" />
           <div v-if="!avatarLoaded" class="pf-avatar-fallback">{{ initial }}</div>
         </div>
         <button v-if="editing && avatarLoaded" class="pf-avatar-remove" @click.stop="removeAvatar">Remove photo</button>

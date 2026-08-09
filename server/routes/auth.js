@@ -248,7 +248,7 @@ export default function authRoutes(prisma) {
         return res.status(404).json({ error: 'No avatar' })
       }
       res.set('Content-Type', user.avatarMime || 'image/jpeg')
-      res.set('Cache-Control', 'public, max-age=3600')
+      res.set('Cache-Control', 'private, max-age=86400')
       res.send(user.avatarData)
     } catch {
       res.status(500).json({ error: 'Failed to fetch avatar' })

@@ -4,6 +4,12 @@ function getToken() {
   return localStorage.getItem('pinna-token')
 }
 
+/** Authorization header for raw fetch calls (geo proxy etc.) */
+export function authHeader() {
+  const t = getToken()
+  return t ? { Authorization: `Bearer ${t}` } : {}
+}
+
 function getRefreshToken() {
   return localStorage.getItem('pinna-refresh-token')
 }

@@ -28,3 +28,6 @@ dist-ssr
 
 # Design handoff bundles / scratch
 temp/
+
+# Database dumps
+backups/

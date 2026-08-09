@@ -1,6 +1,9 @@
 import { ref } from 'vue'
 
-const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving'
+import { authHeader } from '../api.js'
+
+// Proxied through our server (caching + rate limits)
+const OSRM_BASE = '/api/geo/route'
 
 export function useRouting() {
   const route = ref(null)
@@ -14,7 +17,7 @@ export function useRouting() {
 
     try {
       const url = `${OSRM_BASE}/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`
-      const response = await fetch(url)
+      const response = await fetch(url, { headers: authHeader() })
 
       if (!response.ok) throw new Error('Routing failed')
 

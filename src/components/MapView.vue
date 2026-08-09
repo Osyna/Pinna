@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, markRaw } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch, markRaw } from 'vue'
 import maplibregl from 'maplibre-gl'
 import { usePlacesStore } from '../stores/places'
 import { useFriendsStore } from '../stores/friends'
@@ -43,6 +43,25 @@ const friendAvatarError = ref(false)
 const currentZoom = ref(2)
 const currentLayer = ref('dark')
 const showLegendPanel = ref(false)
+const hiddenCats = ref(new Set())
+
+const legendCategories = computed(() =>
+  friendsStore.viewingFriendId ? (friendsStore.viewingFriendCategories || []) : store.categories
+)
+
+const legendCounts = computed(() => {
+  const src = friendsStore.viewingFriendId ? friendsStore.viewingFriendPlaces : store.places
+  const m = {}
+  src.forEach(p => { m[p.category] = (m[p.category] || 0) + 1 })
+  return m
+})
+
+function toggleCategoryVisibility(id) {
+  const s = new Set(hiddenCats.value)
+  s.has(id) ? s.delete(id) : s.add(id)
+  hiddenCats.value = s
+  renderMarkers()
+}
 const hasBuiltLegend = ref(false)
 
 watch(() => props.splashFinished, (done) => {
@@ -281,8 +300,7 @@ function setupCustomLayers() {
     paint: {
       'circle-radius': ['step', ['get', 'point_count'], 16, 10, 22, 50, 28],
       'circle-color': ACCENT,
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#2e2140',
+      'circle-stroke-width': 0,
       'circle-opacity': 1,
     },
   })
@@ -390,20 +408,28 @@ function setupClickHandlers() {
   map.on('click', 'nearby-clusters', (e) => handleClusterClick('nearby', e))
   map.on('click', 'nearby-cluster-count', (e) => handleClusterClick('nearby', e))
 
-  // Places click
-  map.on('click', 'places-circles', (e) => {
+  // Places click — when several markers overlap at this spot, offer a chooser
+  function handlePlaceClick(e) {
+    const pad = 14
+    const bbox = [
+      [e.point.x - pad, e.point.y - pad],
+      [e.point.x + pad, e.point.y + pad],
+    ]
+    const hits = map.queryRenderedFeatures(bbox, { layers: ['places-circles', 'places-selected'] })
+    const ids = [...new Set(hits.map(f => f.properties.id))]
+    const placesSource = friendsStore.viewingFriendId ? friendsStore.viewingFriendPlaces : store.places
+
+    if (ids.length > 1) {
+      showPlaceChooser(ids.map(id => placesSource.find(p => p.id === id)).filter(Boolean), e.lngLat)
+      return
+    }
     const placeId = e.features[0].properties.id
     store.selectPlace(placeId)
-    const placesSource = friendsStore.viewingFriendId ? friendsStore.viewingFriendPlaces : store.places
     const place = placesSource.find(p => p.id === placeId)
     if (place) emit('show-detail', place)
-  })
-  map.on('click', 'places-selected', (e) => {
-    const placeId = e.features[0].properties.id
-    const placesSource = friendsStore.viewingFriendId ? friendsStore.viewingFriendPlaces : store.places
-    const place = placesSource.find(p => p.id === placeId)
-    if (place) emit('show-detail', place)
-  })
+  }
+  map.on('click', 'places-circles', handlePlaceClick)
+  map.on('click', 'places-selected', handlePlaceClick)
 
   // Nearby click — show popup
   map.on('click', 'nearby-circles', (e) => {
@@ -480,7 +506,8 @@ function renderMarkers() {
   if (!map || !map.getSource('places')) return
 
   const isViewingFriend = !!friendsStore.viewingFriendId
-  const placesToRender = isViewingFriend ? friendsStore.viewingFriendPlaces : store.places
+  const placesToRender = (isViewingFriend ? friendsStore.viewingFriendPlaces : store.places)
+    .filter(place => !hiddenCats.value.has(place.category))
 
   const features = placesToRender.map(place => {
     const cat = isViewingFriend
@@ -866,6 +893,34 @@ async function viewFriendPlaces(friendId) {
   }
 }
 
+/* Several places share (almost) the same spot: let the user pick one */
+function showPlaceChooser(places, lngLat) {
+  if (!map || !places.length) return
+  const getCatFn = friendsStore.viewingFriendId
+    ? friendsStore.getCategoryById
+    : store.getCategoryById
+  const rows = places.map(p => {
+    const cat = getCatFn(p.category)
+    return `<button class="pc-row" data-place-id="${p.id}">
+      <span class="pc-icon" style="background:${(cat?.color || '#8E8E93')}22;color:${cat?.color || '#8E8E93'}">${categoryIconSvg(cat?.icon, { size: 13 })}</span>
+      <span class="pc-name">${p.name}</span>
+    </button>`
+  }).join('')
+  const html = `<div class="place-chooser"><div class="pc-title">${places.length} places here</div>${rows}</div>`
+  nearbyPopup.setLngLat(lngLat).setHTML(html).addTo(map)
+  const el = nearbyPopup.getElement()
+  el.querySelectorAll('.pc-row').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const place = places.find(p => p.id === btn.dataset.placeId)
+      nearbyPopup.remove()
+      if (place) {
+        store.selectPlace(place.id)
+        emit('show-detail', place)
+      }
+    })
+  })
+}
+
 function showPlacePreview(place) {
   if (!map) return
   const cat = friendsStore.viewingFriendId ? friendsStore.getCategoryById(place.category) : store.getCategoryById(place.category)
@@ -926,6 +981,14 @@ onMounted(() => {
     setupCustomLayers()
     setupClickHandlers()
     setupLongPress()
+    // Pre-generate marker images for known categories (no first-render pop-in)
+    store.categories.forEach(cat => {
+      const id = markerImageId(cat)
+      if (!map.hasImage(id)) {
+        const { imageData, pixelRatio } = drawMarkerImage(cat.icon, cat.color)
+        map.addImage(id, imageData, { pixelRatio })
+      }
+    })
     renderMarkers()
   })
 
@@ -949,7 +1012,7 @@ onBeforeUnmount(() => {
 })
 
 /* ─── Watchers ─── */
-watch(() => [store.places, store.selectedPlaceId], () => renderMarkers(), { deep: true })
+watch(() => [store.placesVersion, store.selectedPlaceId], () => renderMarkers())
 watch(() => [friendsStore.viewingFriendPlaces, friendsStore.viewingFriendId], () => renderMarkers(), { deep: true })
 watch(nearbyPlaces, () => { if (showNearby.value) renderNearbyMarkers() })
 watch([userLat, userLng], () => updateUserMarker())
@@ -1057,7 +1120,7 @@ watch(theme, (newTheme) => {
 
     <!-- Right-side controls — vertically centered -->
     <div class="right-controls" :class="{ 'build-anim build-anim--slide-right build-anim--delay-3': splashFinished }">
-      <button :class="['rc-btn', { active: locating || userLat != null }]" @click="locateMe" title="My location">
+      <button :class="['rc-btn', { active: locating || userLat != null }]" @click="locateMe" title="My location" aria-label="My location">
         <svg v-if="!locating" width="18" height="18" viewBox="0 0 24 24" fill="none"
           :stroke="userLat != null ? 'var(--accent)' : 'currentColor'" stroke-width="2" stroke-linecap="round">
           <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3m-10-10h3m14 0h3"/>
@@ -1065,13 +1128,13 @@ watch(theme, (newTheme) => {
         <div v-else class="btn-spin"></div>
       </button>
       <div ref="zoomPillRef" class="rc-zoom-pill">
-        <button class="rc-zoom-btn" @click="map && map.zoomIn({ duration: 300 })" title="Zoom in">
+        <button class="rc-zoom-btn" @click="map && map.zoomIn({ duration: 300 })" title="Zoom in" aria-label="Zoom in">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </button>
         <div class="rc-zoom-divider"></div>
-        <button class="rc-zoom-btn" @click="map && map.zoomOut({ duration: 300 })" title="Zoom out">
+        <button class="rc-zoom-btn" @click="map && map.zoomOut({ duration: 300 })" title="Zoom out" aria-label="Zoom out">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
@@ -1080,7 +1143,7 @@ watch(theme, (newTheme) => {
       <button
         v-if="!friendsStore.viewingFriendId && friendsStore.friends.length > 0"
         class="rc-btn"
-        @click="showFriendPicker = !showFriendPicker"
+        aria-label="View a friend's map" @click="showFriendPicker = !showFriendPicker"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
@@ -1159,41 +1222,38 @@ watch(theme, (newTheme) => {
       </div>
     </div>
 
-    <!-- Category legend -->
-    <div class="legend-section">
-      <div 
-        v-if="store.categories.length > 0" 
-        class="legend-container" 
-        :class="{ 
-          'is-expanded': showLegendPanel, 
-          'build-anim build-anim--slide-left build-anim--delay-4': splashFinished && !hasBuiltLegend 
-        }" 
-        :style="{ '--total': store.categories.length }"
-        @click="showLegendPanel = !showLegendPanel"
-      >
-        <div 
-          v-for="(cat, index) in store.categories" 
-          :key="cat.id" 
-          class="legend-row"
-          :style="{ '--index': index }"
+    <!-- Pin types: legend button + panel -->
+    <button
+      class="legend-fab" aria-label="Pin types legend"
+      :class="{ 'build-anim build-anim--drop build-anim--delay-1': splashFinished && !hasBuiltLegend }"
+      title="Pin types"
+      @click="showLegendPanel = !showLegendPanel"
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3 21 8l-9 5-9-5 9-5Z"/><path d="M3 14l9 5 9-5"/>
+      </svg>
+    </button>
+
+    <div v-if="showLegendPanel" class="legend-card">
+      <div class="legend-card-head">
+        <span>Pin types</span>
+        <button @click="showLegendPanel = false">Done</button>
+      </div>
+      <div class="legend-grid">
+        <button
+          v-for="cat in legendCategories" :key="cat.id"
+          :class="['legend-chip', { off: hiddenCats.has(cat.id) }]"
+          :style="{ background: cat.color + '1f' }"
+          @click="toggleCategoryVisibility(cat.id)"
         >
-          <div
-            class="legend-dot-item"
-            :style="{ color: cat.color, background: cat.color + '24' }"
-            :title="cat.name"
-          >
+          <span class="legend-chip-icon" :style="{ color: cat.color }">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
               <path :d="iconPathFor(cat.icon)" />
             </svg>
-          </div>
-          
-          <transition name="legend-text">
-            <div v-if="showLegendPanel" class="legend-text-group" @click.stop>
-              <span class="legend-item-name">{{ cat.name }}</span>
-              <span class="legend-item-count">{{ store.categoryCounts[cat.id] || 0 }}</span>
-            </div>
-          </transition>
-        </div>
+          </span>
+          <span class="legend-chip-name">{{ cat.name }}</span>
+          <span class="legend-chip-count">{{ legendCounts[cat.id] || 0 }}</span>
+        </button>
       </div>
     </div>
 

@@ -6,6 +6,7 @@ import { useLinkPreview } from '../composables/useLinkPreview'
 import { hapticTap } from '../composables/useHaptics'
 import { api } from '../api.js'
 import { ACCENT } from '../theme'
+import { iconPathFor } from '../categoryIcons'
 
 const props = defineProps({
   placeId: { type: String, default: null },
@@ -32,6 +33,17 @@ const editForm = ref({})
 const editTagInput = ref('')
 const hoverRating = ref(0)
 const showDeleteConfirm = ref(false)
+const newListMode = ref(false)
+const newListName = ref('')
+
+async function createListWithPlace() {
+  const name = newListName.value.trim()
+  newListMode.value = false
+  newListName.value = ''
+  if (!name || !place.value) return
+  const list = await store.createList(name).catch(() => null)
+  if (list) await store.toggleListMembership(list.id, place.value.id).catch(() => {})
+}
 
 // Friends who saved the same place
 const authStore = useAuthStore()
@@ -204,18 +216,50 @@ function formatDate(ts) {
         <div class="hero-content">
           <div class="hero-top">
             <div class="cat-pill" :style="{ background: (category?.color || ACCENT) + '25', color: category?.color }">
-              <span class="cat-dot" :style="{ background: category?.color }"></span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="iconPathFor(category?.icon)" />
+              </svg>
               {{ category?.name }}
             </div>
-            <button class="close-btn" @click="hapticTap(); $emit('close')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
+            <div class="hero-btns">
+              <button v-if="!readonly && !isEditing" class="hero-icon-btn" title="Edit place" aria-label="Edit place" @click="startEdit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button v-if="!readonly && !isEditing" class="hero-icon-btn danger" title="Delete place" aria-label="Delete place" @click="showDeleteConfirm = !showDeleteConfirm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
+              <button class="close-btn" aria-label="Close" @click="hapticTap(); $emit('close')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
-          <h2 class="place-name">{{ place.name }}</h2>
+          <!-- Delete confirmation (next to the buttons, not at the bottom) -->
+          <div v-if="showDeleteConfirm && !readonly" class="delete-confirm">
+            <p>Delete <strong>{{ place.name }}</strong>? You can recover it from Recently Deleted in My Places.</p>
+            <div class="confirm-btns">
+              <button class="btn-confirm-delete" @click="deletePlace">Yes, delete</button>
+              <button class="btn-confirm-cancel" @click="showDeleteConfirm = false">No, keep it</button>
+            </div>
+          </div>
+
+          <div class="place-name-row">
+            <span class="place-cat-icon" :style="{ background: (category?.color || ACCENT) + '22', color: category?.color || ACCENT }">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="iconPathFor(category?.icon)" />
+              </svg>
+            </span>
+            <h2 class="place-name">{{ place.name }}</h2>
+          </div>
 
           <!-- Rating -->
           <div v-if="place.rating" class="place-rating">
@@ -376,32 +420,30 @@ function formatDate(ts) {
           </div>
         </div>
 
-        <!-- Bottom actions -->
-        <div v-if="!readonly" class="detail-actions">
-          <button class="btn-edit" @click="startEdit">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-            Edit
-          </button>
-          <button class="btn-delete" @click="showDeleteConfirm = true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-            </svg>
-            Delete
-          </button>
-        </div>
-
-        <!-- Delete confirmation -->
-        <div v-if="showDeleteConfirm && !readonly" class="delete-confirm">
-          <p>Delete <strong>{{ place.name }}</strong>?</p>
-          <div class="confirm-btns">
-            <button class="btn-confirm-delete" @click="deletePlace">Yes, delete</button>
-            <button class="btn-confirm-cancel" @click="showDeleteConfirm = false">Cancel</button>
+        <!-- Lists -->
+        <div v-if="!readonly" class="tags-section">
+          <span class="tags-label">Lists</span>
+          <div class="tags-list">
+            <button
+              v-for="l in store.lists" :key="l.id"
+              :class="['list-chip', { active: l.placeIds.includes(place.id) }]"
+              @click="store.toggleListMembership(l.id, place.id)"
+            >
+              {{ l.name }}
+            </button>
+            <button v-if="!newListMode" class="list-chip new" @click="newListMode = true">+ New</button>
+            <input
+              v-else
+              v-model="newListName"
+              class="list-chip-input"
+              placeholder="List name…"
+              autofocus
+              @keyup.enter="createListWithPlace"
+              @blur="createListWithPlace"
+            />
           </div>
         </div>
+
       </div>
 
       <!-- Edit mode -->
@@ -615,6 +657,30 @@ function formatDate(ts) {
   border-radius: 50%;
 }
 
+.hero-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.hero-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--text-secondary);
+  border-radius: 50%;
+  box-shadow: 0 1px 5px rgba(46, 33, 64, 0.10);
+
+  &.danger {
+    background: #fbe3e1;
+    color: #e8453c;
+  }
+}
+
 .close-btn {
   width: 36px;
   height: 36px;
@@ -632,12 +698,32 @@ function formatDate(ts) {
   }
 }
 
+.place-name-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 8px;
+}
+
+.place-cat-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 2.5px solid #2e2140;
+
+  svg { display: block; }
+}
+
 .place-name {
   font-size: 24px;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.02em;
-  margin-bottom: 8px;
+  min-width: 0;
 }
 
 .place-rating {
@@ -970,12 +1056,13 @@ function formatDate(ts) {
 
 /* Delete confirm */
 .delete-confirm {
-  margin: 0 22px 8px;
-  padding: 16px;
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.15);
-  border-radius: var(--radius);
+  margin: 10px 0 4px;
+  padding: 14px;
+  background: #fbe3e1;
+  border: none;
+  border-radius: 16px;
   text-align: center;
+  animation: ct-up 0.2s ease both;
 
   p {
     font-size: 14px;
