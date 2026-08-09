@@ -254,9 +254,16 @@ function contextAction(action) {
     </div>
 
     <!-- Header -->
-    <div class="pv-header">
-      <h1 class="pv-title">{{ friendsStore.viewingFriendId ? (friendsStore.viewingFriendInfo?.name?.split(' ')[0] || 'Friend') + "'s Places" : 'My Places' }}</h1>
-      <span class="pv-count">{{ activePlaceCount }} saved</span>
+    <div class="pv-header view-hero hero--places">
+      <span class="view-hero-icon">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+        </svg>
+      </span>
+      <div class="view-hero-text">
+        <h1 class="pv-title">{{ friendsStore.viewingFriendId ? (friendsStore.viewingFriendInfo?.name?.split(' ')[0] || 'Friend') + "'s Places" : 'My Places' }}</h1>
+        <span class="pv-count">{{ activePlaceCount }} saved</span>
+      </div>
       <button v-if="!friendsStore.viewingFriendId" class="pv-select-btn" :class="{ on: selectMode }" @click="toggleSelectMode">
         {{ selectMode ? 'Cancel' : 'Select' }}
       </button>

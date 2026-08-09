@@ -197,6 +197,13 @@ html[data-skin="cartoon"] {
     &:active { transform: translateY(2px); opacity: 1; }
   }
 
+  /* Per-tab identity colors (reused by each view's hero header) */
+  .tab--map.active { background: #38c172; box-shadow: 0 4px 12px rgba(56, 193, 114, 0.35); }
+  .tab--search.active { background: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35); }
+  .tab--places.active { background: #f0a90b; box-shadow: 0 4px 12px rgba(240, 169, 11, 0.35); }
+  .tab--friends.active { background: #f15bb5; box-shadow: 0 4px 12px rgba(241, 91, 181, 0.35); }
+  .tab--profile.active { background: $ct-purple; box-shadow: 0 4px 12px rgba(109, 59, 240, 0.35); }
+
   .tab-badge {
     background: $ct-yellow;
     color: $ct-ink;
@@ -581,14 +588,122 @@ html[data-skin="cartoon"] {
     &:active { transform: translateY(2px); opacity: 1; }
   }
 
+  /* ── View hero headers (Profile-style, per-tab identity color) ─── */
+  .view-hero {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 16px 12px;
+    padding: 15px 16px;
+    border-radius: 24px;
+    box-shadow: $ct-shadow-card;
+
+    /* decorative corner blobs, like the Profile hero */
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      z-index: 0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    &::before {
+      left: -16px;
+      top: -16px;
+      width: 58px;
+      height: 58px;
+      background: var(--hero-deco, rgba(109, 59, 240, 0.12));
+    }
+
+    &::after {
+      right: -14px;
+      bottom: -20px;
+      width: 68px;
+      height: 68px;
+      background: rgba(255, 201, 74, 0.40);
+    }
+
+    > * { position: relative; z-index: 1; }
+
+    h1 {
+      font-family: $ct-display;
+      font-weight: 800;
+      font-size: 26px;
+      line-height: 1.05;
+      letter-spacing: 0;
+      /* base titles use a gradient text-fill — reset it so the hero color applies */
+      background: none;
+      -webkit-background-clip: initial;
+      background-clip: initial;
+      -webkit-text-fill-color: currentColor;
+      color: var(--hero-color, #{$ct-purple});
+      margin: 0;
+    }
+  }
+
+  .view-hero-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--hero-color, #{$ct-purple});
+    box-shadow: $ct-shadow-chip;
+  }
+
+  .view-hero-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-start;
+  }
+
+  .hero--search {
+    --hero-color: #3b82f6;
+    --hero-deco: rgba(59, 130, 246, 0.13);
+    background: #e7f0fe;
+  }
+
+  .hero--places {
+    --hero-color: #e8930c;
+    --hero-deco: rgba(240, 169, 11, 0.16);
+    background: #fdf3d5;
+  }
+
+  .hero--friends {
+    --hero-color: #f15bb5;
+    --hero-deco: rgba(241, 91, 181, 0.14);
+    background: #fde7f4;
+  }
+
+  /* titles take the hero color (out-specify base component rules) */
+  .hero--search .sv-title { color: #3b82f6; }
+  .hero--places .pv-title { color: #e8930c; }
+  .hero--friends .fv-title { color: #f15bb5; }
+
   /* ── 5 · Discover (SearchView) ─────────────────────────────────── */
   .sv-title {
     font-family: $ct-display;
     font-weight: 800;
-    color: $ct-purple;
   }
 
-  .sv-subtitle { font-weight: 700; }
+  .sv-header.view-hero.collapsed {
+    padding: 10px 16px;
+
+    .sv-title { font-size: 20px; }
+    .sv-subtitle { display: none; }
+    .view-hero-icon { width: 34px; height: 34px; border-radius: 12px; }
+  }
+
+  .sv-subtitle { font-weight: 700; color: $ct-body; font-size: 12.5px; }
 
   .sv-search-wrap,
   .sv-city-wrap,
@@ -675,7 +790,6 @@ html[data-skin="cartoon"] {
   .pv-title {
     font-family: $ct-display;
     font-weight: 800;
-    color: $ct-purple;
   }
 
   .pv-count {
@@ -769,14 +883,15 @@ html[data-skin="cartoon"] {
     background: #fff;
     border: none;
     border-radius: 13px;
-    padding: 5px 13px;
+    padding: 6px 13px;
     font-weight: 900;
     font-size: 12px;
-    color: $ct-purple;
+    color: #e8930c;
     box-shadow: $ct-shadow-chip;
     cursor: pointer;
+    flex-shrink: 0;
 
-    &.on { background: $ct-lavender; }
+    &.on { background: #fdf3cd; }
   }
 
   .pv-card.selecting { opacity: 0.94; }
@@ -1022,7 +1137,6 @@ html[data-skin="cartoon"] {
   .fv-title {
     font-family: $ct-display;
     font-weight: 800;
-    color: $ct-purple;
   }
 
   .fv-count {
