@@ -48,11 +48,74 @@ onMounted(() => {
   if (!friendsStore.viewingFriendId) store.fetchTrash()
 })
 
+/* ── Lists (collections) ── */
+const activeList = ref(null)
+const newListMode = ref(false)
+const newListName = ref('')
+
+async function submitNewList() {
+  const name = newListName.value.trim()
+  newListMode.value = false
+  newListName.value = ''
+  if (!name) return
+  const list = await store.createList(name).catch(() => null)
+  if (list) activeList.value = list.id
+}
+
+async function removeList(id) {
+  await store.deleteList(id).catch(() => {})
+  if (activeList.value === id) activeList.value = null
+}
+
+/* ── Bulk selection ── */
+const selectMode = ref(false)
+const selectedIds = ref(new Set())
+const showBulkCats = ref(false)
+
+function toggleSelectMode() {
+  selectMode.value = !selectMode.value
+  selectedIds.value = new Set()
+  showBulkCats.value = false
+}
+
+function toggleSelected(id) {
+  const s = new Set(selectedIds.value)
+  s.has(id) ? s.delete(id) : s.add(id)
+  selectedIds.value = s
+}
+
+async function bulkDeleteSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  await store.bulkDelete(ids)
+  toggleSelectMode()
+}
+
+async function bulkMoveSelected(catId) {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  await store.bulkSetCategory(ids, catId)
+  toggleSelectMode()
+}
+
+function onCardClick(place) {
+  if (selectMode.value) toggleSelected(place.id)
+  else emit('show-detail', place)
+}
+
 const sortedPlaces = computed(() => {
   let result = activePlaces.value
 
   if (activeCategory.value) {
     result = result.filter(p => p.category === activeCategory.value)
+  }
+
+  if (activeList.value) {
+    const list = store.lists.find(l => l.id === activeList.value)
+    if (list) {
+      const inList = new Set(list.placeIds)
+      result = result.filter(p => inList.has(p.id))
+    }
   }
 
   if (search.value.trim()) {
@@ -194,6 +257,9 @@ function contextAction(action) {
     <div class="pv-header">
       <h1 class="pv-title">{{ friendsStore.viewingFriendId ? (friendsStore.viewingFriendInfo?.name?.split(' ')[0] || 'Friend') + "'s Places" : 'My Places' }}</h1>
       <span class="pv-count">{{ activePlaceCount }} saved</span>
+      <button v-if="!friendsStore.viewingFriendId" class="pv-select-btn" :class="{ on: selectMode }" @click="toggleSelectMode">
+        {{ selectMode ? 'Cancel' : 'Select' }}
+      </button>
     </div>
 
     <!-- Search -->
@@ -227,6 +293,48 @@ function contextAction(action) {
       </button>
     </div>
 
+    <!-- Lists row -->
+    <div v-if="!friendsStore.viewingFriendId" class="pv-lists" @wheel.prevent="onChipRowWheel">
+      <button
+        v-for="l in store.lists" :key="l.id"
+        :class="['pv-list-chip', { active: activeList === l.id }]"
+        @click="activeList = activeList === l.id ? null : l.id"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        {{ l.name }} ({{ l.placeIds.length }})
+        <span v-if="activeList === l.id" class="pv-list-x" title="Delete list" @click.stop="removeList(l.id)">×</span>
+      </button>
+      <button v-if="!newListMode" class="pv-list-chip new" @click="newListMode = true">+ List</button>
+      <input
+        v-else
+        v-model="newListName"
+        class="pv-list-input"
+        placeholder="List name…"
+        autofocus
+        @keyup.enter="submitNewList"
+        @blur="submitNewList"
+      />
+    </div>
+
+    <!-- Bulk action bar -->
+    <div v-if="selectMode" class="pv-bulk-bar">
+      <span class="pv-bulk-count">{{ selectedIds.size }} selected</span>
+      <button class="pv-bulk-btn" :disabled="!selectedIds.size" @click="showBulkCats = !showBulkCats">Move to…</button>
+      <button class="pv-bulk-btn danger" :disabled="!selectedIds.size" @click="bulkDeleteSelected">Delete</button>
+    </div>
+    <div v-if="selectMode && showBulkCats" class="pv-bulk-cats" @wheel.prevent="onChipRowWheel">
+      <button
+        v-for="cat in activeCategories" :key="cat.id"
+        class="pv-chip"
+        @click="bulkMoveSelected(cat.id)"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" :stroke="cat.color" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path :d="iconPathFor(cat.icon)" />
+        </svg>
+        {{ cat.name }}
+      </button>
+    </div>
+
     <!-- Pull-to-refresh indicator -->
     <div v-if="pullDistance > 0 || refreshing" class="pv-pull-indicator" :style="{ height: pullDistance + 'px' }">
       <div :class="['pv-pull-spinner', { active: pullDistance > 50 || refreshing }]"></div>
@@ -252,12 +360,15 @@ function contextAction(action) {
 
       <button
         v-for="place in sortedPlaces" :key="place.id"
-        class="pv-card contain-item"
-        @click="emit('show-detail', place)"
+        :class="['pv-card', 'contain-item', { selected: selectMode && selectedIds.has(place.id), selecting: selectMode }]"
+        @click="onCardClick(place)"
         @touchstart.passive="onCardPressStart($event, place)"
         @touchend="onCardPressEnd"
         @touchcancel="onCardPressEnd"
       >
+        <span v-if="selectMode" :class="['pv-check', { on: selectedIds.has(place.id) }]">
+          <svg v-if="selectedIds.has(place.id)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
         <div class="pv-card-left">
           <span class="pv-cat-icon" :style="{ background: getCat(place.category).color + '22', color: getCat(place.category).color }">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -523,6 +634,7 @@ function contextAction(action) {
 
 /* Card */
 .pv-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;

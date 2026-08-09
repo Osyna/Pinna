@@ -408,20 +408,28 @@ function setupClickHandlers() {
   map.on('click', 'nearby-clusters', (e) => handleClusterClick('nearby', e))
   map.on('click', 'nearby-cluster-count', (e) => handleClusterClick('nearby', e))
 
-  // Places click
-  map.on('click', 'places-circles', (e) => {
+  // Places click — when several markers overlap at this spot, offer a chooser
+  function handlePlaceClick(e) {
+    const pad = 14
+    const bbox = [
+      [e.point.x - pad, e.point.y - pad],
+      [e.point.x + pad, e.point.y + pad],
+    ]
+    const hits = map.queryRenderedFeatures(bbox, { layers: ['places-circles', 'places-selected'] })
+    const ids = [...new Set(hits.map(f => f.properties.id))]
+    const placesSource = friendsStore.viewingFriendId ? friendsStore.viewingFriendPlaces : store.places
+
+    if (ids.length > 1) {
+      showPlaceChooser(ids.map(id => placesSource.find(p => p.id === id)).filter(Boolean), e.lngLat)
+      return
+    }
     const placeId = e.features[0].properties.id
     store.selectPlace(placeId)
-    const placesSource = friendsStore.viewingFriendId ? friendsStore.viewingFriendPlaces : store.places
     const place = placesSource.find(p => p.id === placeId)
     if (place) emit('show-detail', place)
-  })
-  map.on('click', 'places-selected', (e) => {
-    const placeId = e.features[0].properties.id
-    const placesSource = friendsStore.viewingFriendId ? friendsStore.viewingFriendPlaces : store.places
-    const place = placesSource.find(p => p.id === placeId)
-    if (place) emit('show-detail', place)
-  })
+  }
+  map.on('click', 'places-circles', handlePlaceClick)
+  map.on('click', 'places-selected', handlePlaceClick)
 
   // Nearby click — show popup
   map.on('click', 'nearby-circles', (e) => {
@@ -883,6 +891,34 @@ async function viewFriendPlaces(friendId) {
     const first = friendsStore.viewingFriendPlaces[0]
     map.flyTo({ center: [first.lng, first.lat], zoom: 12, duration: 800, padding: FLY_PADDING })
   }
+}
+
+/* Several places share (almost) the same spot: let the user pick one */
+function showPlaceChooser(places, lngLat) {
+  if (!map || !places.length) return
+  const getCatFn = friendsStore.viewingFriendId
+    ? friendsStore.getCategoryById
+    : store.getCategoryById
+  const rows = places.map(p => {
+    const cat = getCatFn(p.category)
+    return `<button class="pc-row" data-place-id="${p.id}">
+      <span class="pc-icon" style="background:${(cat?.color || '#8E8E93')}22;color:${cat?.color || '#8E8E93'}">${categoryIconSvg(cat?.icon, { size: 13 })}</span>
+      <span class="pc-name">${p.name}</span>
+    </button>`
+  }).join('')
+  const html = `<div class="place-chooser"><div class="pc-title">${places.length} places here</div>${rows}</div>`
+  nearbyPopup.setLngLat(lngLat).setHTML(html).addTo(map)
+  const el = nearbyPopup.getElement()
+  el.querySelectorAll('.pc-row').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const place = places.find(p => p.id === btn.dataset.placeId)
+      nearbyPopup.remove()
+      if (place) {
+        store.selectPlace(place.id)
+        emit('show-detail', place)
+      }
+    })
+  })
 }
 
 function showPlacePreview(place) {

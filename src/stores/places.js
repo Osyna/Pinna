@@ -24,8 +24,29 @@ export const ICON_TO_CATEGORY = {
 
 function convertGeoJSONToPlaces(geojson) {
   return geojson.features.map((feature) => {
+    if (!feature?.geometry?.coordinates) return null
     const { coordinates } = feature.geometry
-    const { name, address, icon, userComment, tags } = feature.properties
+    const props = feature.properties || {}
+
+    // Google Maps Takeout ("Saved Places.json"): properties.location + google_maps_url
+    if (props.google_maps_url || props.location) {
+      const loc = props.location || {}
+      return {
+        name: loc.name || props.Title || 'Unknown',
+        lat: coordinates[1],
+        lng: coordinates[0],
+        address: loc.address || '',
+        category: 'other',
+        notes: props.Comment || '',
+        rating: 0,
+        cuisine: 'None',
+        tags: [],
+        website: props.google_maps_url || '',
+      }
+    }
+
+    // Mapstr / generic GeoJSON export
+    const { name, address, icon, userComment, tags } = props
     return {
       name: name || 'Unknown',
       lat: coordinates[1],
@@ -37,7 +58,7 @@ function convertGeoJSONToPlaces(geojson) {
       cuisine: 'None',
       tags: Array.isArray(tags) ? tags.map(t => typeof t === 'string' ? t : t.name) : [],
     }
-  })
+  }).filter(Boolean)
 }
 
 function parseCSV(text) {
@@ -288,6 +309,58 @@ export const usePlacesStore = defineStore("pinna-places", () => {
     showToast('Place restored', { type: 'success' })
   }
 
+  /* ── Lists (collections) ── */
+  const lists = ref([])
+
+  async function fetchLists() {
+    try {
+      const data = await api.get('/lists')
+      lists.value = data.lists
+    } catch { /* lists are best-effort */ }
+  }
+
+  async function createList(name) {
+    const data = await api.post('/lists', { name })
+    lists.value = [...lists.value, data.list]
+    return data.list
+  }
+
+  async function deleteList(id) {
+    await api.delete(`/lists/${id}`)
+    lists.value = lists.value.filter(l => l.id !== id)
+  }
+
+  async function toggleListMembership(listId, placeId) {
+    const list = lists.value.find(l => l.id === listId)
+    if (!list) return
+    if (list.placeIds.includes(placeId)) {
+      await api.delete(`/lists/${listId}/places/${placeId}`)
+      list.placeIds = list.placeIds.filter(id => id !== placeId)
+    } else {
+      await api.post(`/lists/${listId}/places`, { placeId })
+      list.placeIds = [...list.placeIds, placeId]
+    }
+    lists.value = [...lists.value]
+  }
+
+  /* ── Bulk operations ── */
+  async function bulkDelete(ids) {
+    await Promise.all(ids.map(id => api.delete(`/places/${id}`)))
+    const removed = places.value.filter(p => ids.includes(p.id))
+    places.value = places.value.filter(p => !ids.includes(p.id))
+    trashedPlaces.value = [
+      ...removed.map(p => ({ ...p, deletedAt: new Date().toISOString() })),
+      ...trashedPlaces.value,
+    ]
+    showToast(`${ids.length} places moved to Recently Deleted`, { type: 'success' })
+  }
+
+  async function bulkSetCategory(ids, category) {
+    await Promise.all(ids.map(id => api.put(`/places/${id}`, { category })))
+    places.value = places.value.map(p => ids.includes(p.id) ? { ...p, category } : p)
+    showToast(`${ids.length} places re-categorized`, { type: 'success' })
+  }
+
   async function purgePlace(id) {
     await api.delete(`/places/${id}/permanent`)
     trashedPlaces.value = trashedPlaces.value.filter(t => t.id !== id)
@@ -422,6 +495,13 @@ export const usePlacesStore = defineStore("pinna-places", () => {
     removePlace,
     placesVersion,
     trashedPlaces,
+    lists,
+    fetchLists,
+    createList,
+    deleteList,
+    toggleListMembership,
+    bulkDelete,
+    bulkSetCategory,
     fetchTrash,
     restorePlace,
     purgePlace,

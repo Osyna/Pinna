@@ -33,6 +33,17 @@ const editForm = ref({})
 const editTagInput = ref('')
 const hoverRating = ref(0)
 const showDeleteConfirm = ref(false)
+const newListMode = ref(false)
+const newListName = ref('')
+
+async function createListWithPlace() {
+  const name = newListName.value.trim()
+  newListMode.value = false
+  newListName.value = ''
+  if (!name || !place.value) return
+  const list = await store.createList(name).catch(() => null)
+  if (list) await store.toggleListMembership(list.id, place.value.id).catch(() => {})
+}
 
 // Friends who saved the same place
 const authStore = useAuthStore()
@@ -406,6 +417,30 @@ function formatDate(ts) {
           <span class="tags-label">Tags</span>
           <div class="tags-list">
             <span v-for="tag in place.tags" :key="tag" class="tag-pill">{{ tag }}</span>
+          </div>
+        </div>
+
+        <!-- Lists -->
+        <div v-if="!readonly" class="tags-section">
+          <span class="tags-label">Lists</span>
+          <div class="tags-list">
+            <button
+              v-for="l in store.lists" :key="l.id"
+              :class="['list-chip', { active: l.placeIds.includes(place.id) }]"
+              @click="store.toggleListMembership(l.id, place.id)"
+            >
+              {{ l.name }}
+            </button>
+            <button v-if="!newListMode" class="list-chip new" @click="newListMode = true">+ New</button>
+            <input
+              v-else
+              v-model="newListName"
+              class="list-chip-input"
+              placeholder="List name…"
+              autofocus
+              @keyup.enter="createListWithPlace"
+              @blur="createListWithPlace"
+            />
           </div>
         </div>
 

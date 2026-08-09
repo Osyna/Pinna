@@ -10,6 +10,7 @@ import categoriesRoutes from './routes/categories.js'
 import previewRoutes from './routes/preview.js'
 import friendsRoutes from './routes/friends.js'
 import geoRoutes from './routes/geo.js'
+import listsRoutes from './routes/lists.js'
 
 const prisma = new PrismaClient()
 const app = express()
@@ -46,6 +47,7 @@ app.use('/api/categories', categoriesRoutes(prisma))
 app.use('/api/preview', previewRoutes())
 app.use('/api/friends', friendsRoutes(prisma))
 app.use('/api/geo', geoRoutes())
+app.use('/api/lists', listsRoutes(prisma))
 
 // Central error handler: log with stack, answer with a safe message
 app.use((err, req, res, _next) => {

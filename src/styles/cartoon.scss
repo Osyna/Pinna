@@ -763,6 +763,152 @@ html[data-skin="cartoon"] {
     box-shadow: $ct-shadow-float;
   }
 
+  /* Select mode + bulk bar */
+  .pv-select-btn {
+    margin-left: auto;
+    background: #fff;
+    border: none;
+    border-radius: 13px;
+    padding: 5px 13px;
+    font-weight: 900;
+    font-size: 12px;
+    color: $ct-purple;
+    box-shadow: $ct-shadow-chip;
+    cursor: pointer;
+
+    &.on { background: $ct-lavender; }
+  }
+
+  .pv-card.selecting { opacity: 0.94; }
+
+  .pv-card.selected {
+    outline: 3px solid $ct-purple;
+    outline-offset: -3px;
+  }
+
+  .pv-check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: inset 0 0 0 2px rgba(46, 33, 64, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+
+    &.on {
+      background: $ct-purple;
+      box-shadow: none;
+    }
+  }
+
+  .pv-bulk-bar {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: calc(76px + var(--safe-bottom));
+    z-index: 1099;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 10px 14px;
+    box-shadow: $ct-shadow-float;
+    animation: ct-up 0.2s ease both;
+  }
+
+  .pv-bulk-count { flex: 1; font-weight: 900; font-size: 13px; color: $ct-ink; }
+
+  .pv-bulk-btn {
+    background: $ct-lavender;
+    border: none;
+    border-radius: 13px;
+    padding: 8px 14px;
+    font-weight: 900;
+    font-size: 12.5px;
+    color: $ct-purple;
+    cursor: pointer;
+
+    &.danger { background: #fbe3e1; color: #e8453c; }
+    &:disabled { opacity: 0.45; }
+  }
+
+  .pv-bulk-cats {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: calc(130px + var(--safe-bottom));
+    z-index: 1099;
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 18px;
+    padding: 9px;
+    box-shadow: $ct-shadow-float;
+    animation: ct-up 0.2s ease both;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  /* Lists row */
+  .pv-lists {
+    display: flex;
+    gap: 7px;
+    padding: 0 16px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  .pv-list-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: $ct-lavender;
+    border: none;
+    border-radius: 14px;
+    padding: 6px 12px;
+    font-weight: 800;
+    font-size: 12px;
+    color: $ct-purple;
+    cursor: pointer;
+
+    &.active { background: $ct-purple; color: #fff; }
+    &.new { background: #fff; box-shadow: $ct-shadow-chip; }
+    &:active { transform: translateY(2px); }
+  }
+
+  .pv-list-x {
+    margin-left: 2px;
+    font-weight: 900;
+    opacity: 0.8;
+  }
+
+  .pv-list-input {
+    flex-shrink: 0;
+    width: 130px;
+    background: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 6px 12px;
+    font-family: $ct-font;
+    font-weight: 800;
+    font-size: 12px;
+    color: $ct-ink;
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(109, 59, 240, 0.5);
+  }
+
   /* Recently Deleted */
   .pv-trash-section { margin: 18px 0 8px; }
 
@@ -1304,6 +1450,35 @@ html[data-skin="cartoon"] {
   }
 
   .info-label { font-weight: 900; }
+
+  .list-chip {
+    background: $ct-lavender;
+    border: none;
+    border-radius: 12px;
+    padding: 5px 12px;
+    font-weight: 800;
+    font-size: 12px;
+    color: $ct-purple;
+    cursor: pointer;
+
+    &.active { background: $ct-purple; color: #fff; }
+    &.new { background: #fff; box-shadow: $ct-shadow-chip; }
+    &:active { transform: translateY(2px); }
+  }
+
+  .list-chip-input {
+    width: 120px;
+    background: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 5px 12px;
+    font-family: $ct-font;
+    font-weight: 800;
+    font-size: 12px;
+    color: $ct-ink;
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(109, 59, 240, 0.5);
+  }
 
   .tag-pill {
     background: #fff;

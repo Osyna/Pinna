@@ -23,8 +23,30 @@ model User {
   createdAt        DateTime     @default(now())
   places           Place[]
   categories       Category[]
+  lists            List[]
   sentRequests     Friendship[] @relation("SentRequests")
   receivedRequests Friendship[] @relation("ReceivedRequests")
+}
+
+model List {
+  id        String      @id @default(uuid())
+  name      String
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  places    ListPlace[]
+
+  @@index([userId])
+}
+
+model ListPlace {
+  listId  String
+  list    List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  placeId String
+  place   Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  addedAt DateTime @default(now())
+
+  @@id([listId, placeId])
 }
 
 model Friendship {
@@ -58,6 +80,7 @@ model Place {
   deletedAt DateTime?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listPlaces ListPlace[]
 
   @@index([userId, deletedAt])
   @@index([userId, category])

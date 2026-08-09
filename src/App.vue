@@ -49,6 +49,7 @@ onMounted(async () => {
   if (authStore.isAuthenticated) {
     await placesStore.fetchPlaces()
     await placesStore.fetchCategories()
+    placesStore.fetchLists()
     friendsStore.fetchFriends()
     friendsStore.fetchRequests()
   }
@@ -58,6 +59,7 @@ watch(() => authStore.isAuthenticated, async (isAuth) => {
   if (isAuth) {
     await placesStore.fetchPlaces()
     await placesStore.fetchCategories()
+    placesStore.fetchLists()
     friendsStore.fetchFriends()
     friendsStore.fetchRequests()
   } else {
