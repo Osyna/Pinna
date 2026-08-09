@@ -14,6 +14,19 @@ const avatarErrors = reactive({})
 const activeSection = ref('friends') // 'friends' | 'requests'
 const selectedFriend = ref(null)
 const handleInput = ref('')
+const copiedHandle = ref(false)
+let copiedTimer = null
+
+function copyMyHandle() {
+  const h = '#' + (authStore.user?.handle || '')
+  navigator.clipboard.writeText(h).then(() => {
+    copiedHandle.value = true
+    clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => { copiedHandle.value = false }, 1400)
+  }).catch(() => {
+    showToast('Could not copy', { type: 'error' })
+  })
+}
 const sending = ref(false)
 const sendError = ref('')
 
@@ -79,16 +92,18 @@ function getInitial(name) {
 
     <!-- Add friend search -->
     <div class="fv-add-wrap">
-      <div class="fv-add-input-wrap">
-        <span class="fv-add-prefix">#</span>
-        <input
-          v-model="handleInput"
-          type="text"
-          placeholder="Add by user ID..."
-          class="fv-add-input"
-          autocomplete="off"
-          @keyup.enter="sendRequest"
-        />
+      <div class="fv-add-row">
+        <div class="fv-add-input-wrap">
+          <span class="fv-add-prefix">#</span>
+          <input
+            v-model="handleInput"
+            type="text"
+            placeholder="Add by user ID..."
+            class="fv-add-input"
+            autocomplete="off"
+            @keyup.enter="sendRequest"
+          />
+        </div>
         <button
           class="fv-add-btn"
           :disabled="!handleInput.trim() || sending"
@@ -154,6 +169,16 @@ function getInitial(name) {
             <polyline points="9 18 15 12 9 6"/>
           </svg>
         </button>
+
+        <!-- Share your ID card -->
+        <div class="fv-share-card">
+          <div class="fv-share-circles"><span></span><span></span><span></span></div>
+          <div class="fv-share-title">Places are better shared</div>
+          <p class="fv-share-sub">
+            Send your ID <strong>#{{ authStore.user?.handle }}</strong> to a friend and their pins land on your map.
+          </p>
+          <button class="fv-share-btn" @click="copyMyHandle">{{ copiedHandle ? 'Copied!' : '#' + (authStore.user?.handle || '') }}</button>
+        </div>
       </template>
 
       <template v-if="activeSection === 'requests'">
@@ -272,7 +297,15 @@ function getInitial(name) {
   flex-shrink: 0;
 }
 
+.fv-add-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
 .fv-add-input-wrap {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   background: var(--bg-tertiary);

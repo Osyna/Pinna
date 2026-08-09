@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, markRaw } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch, markRaw } from 'vue'
 import maplibregl from 'maplibre-gl'
 import { usePlacesStore } from '../stores/places'
 import { useFriendsStore } from '../stores/friends'
@@ -43,6 +43,25 @@ const friendAvatarError = ref(false)
 const currentZoom = ref(2)
 const currentLayer = ref('dark')
 const showLegendPanel = ref(false)
+const hiddenCats = ref(new Set())
+
+const legendCategories = computed(() =>
+  friendsStore.viewingFriendId ? (friendsStore.viewingFriendCategories || []) : store.categories
+)
+
+const legendCounts = computed(() => {
+  const src = friendsStore.viewingFriendId ? friendsStore.viewingFriendPlaces : store.places
+  const m = {}
+  src.forEach(p => { m[p.category] = (m[p.category] || 0) + 1 })
+  return m
+})
+
+function toggleCategoryVisibility(id) {
+  const s = new Set(hiddenCats.value)
+  s.has(id) ? s.delete(id) : s.add(id)
+  hiddenCats.value = s
+  renderMarkers()
+}
 const hasBuiltLegend = ref(false)
 
 watch(() => props.splashFinished, (done) => {
@@ -281,8 +300,7 @@ function setupCustomLayers() {
     paint: {
       'circle-radius': ['step', ['get', 'point_count'], 16, 10, 22, 50, 28],
       'circle-color': ACCENT,
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#2e2140',
+      'circle-stroke-width': 0,
       'circle-opacity': 1,
     },
   })
@@ -480,7 +498,8 @@ function renderMarkers() {
   if (!map || !map.getSource('places')) return
 
   const isViewingFriend = !!friendsStore.viewingFriendId
-  const placesToRender = isViewingFriend ? friendsStore.viewingFriendPlaces : store.places
+  const placesToRender = (isViewingFriend ? friendsStore.viewingFriendPlaces : store.places)
+    .filter(place => !hiddenCats.value.has(place.category))
 
   const features = placesToRender.map(place => {
     const cat = isViewingFriend
@@ -1159,41 +1178,38 @@ watch(theme, (newTheme) => {
       </div>
     </div>
 
-    <!-- Category legend -->
-    <div class="legend-section">
-      <div 
-        v-if="store.categories.length > 0" 
-        class="legend-container" 
-        :class="{ 
-          'is-expanded': showLegendPanel, 
-          'build-anim build-anim--slide-left build-anim--delay-4': splashFinished && !hasBuiltLegend 
-        }" 
-        :style="{ '--total': store.categories.length }"
-        @click="showLegendPanel = !showLegendPanel"
-      >
-        <div 
-          v-for="(cat, index) in store.categories" 
-          :key="cat.id" 
-          class="legend-row"
-          :style="{ '--index': index }"
+    <!-- Pin types: legend button + panel -->
+    <button
+      class="legend-fab"
+      :class="{ 'build-anim build-anim--drop build-anim--delay-1': splashFinished && !hasBuiltLegend }"
+      title="Pin types"
+      @click="showLegendPanel = !showLegendPanel"
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3 21 8l-9 5-9-5 9-5Z"/><path d="M3 14l9 5 9-5"/>
+      </svg>
+    </button>
+
+    <div v-if="showLegendPanel" class="legend-card">
+      <div class="legend-card-head">
+        <span>Pin types</span>
+        <button @click="showLegendPanel = false">Done</button>
+      </div>
+      <div class="legend-grid">
+        <button
+          v-for="cat in legendCategories" :key="cat.id"
+          :class="['legend-chip', { off: hiddenCats.has(cat.id) }]"
+          :style="{ background: cat.color + '1f' }"
+          @click="toggleCategoryVisibility(cat.id)"
         >
-          <div
-            class="legend-dot-item"
-            :style="{ color: cat.color, background: cat.color + '24' }"
-            :title="cat.name"
-          >
+          <span class="legend-chip-icon" :style="{ color: cat.color }">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
               <path :d="iconPathFor(cat.icon)" />
             </svg>
-          </div>
-          
-          <transition name="legend-text">
-            <div v-if="showLegendPanel" class="legend-text-group" @click.stop>
-              <span class="legend-item-name">{{ cat.name }}</span>
-              <span class="legend-item-count">{{ store.categoryCounts[cat.id] || 0 }}</span>
-            </div>
-          </transition>
-        </div>
+          </span>
+          <span class="legend-chip-name">{{ cat.name }}</span>
+          <span class="legend-chip-count">{{ legendCounts[cat.id] || 0 }}</span>
+        </button>
       </div>
     </div>
 

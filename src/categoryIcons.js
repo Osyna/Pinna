@@ -48,15 +48,20 @@ export function drawMarkerImage(iconName, color, { size = 34, pixelRatio = 2 } =
   canvas.height = px
   const ctx = canvas.getContext('2d')
   const center = px / 2
-  const ink = '#2e2140'
 
-  // White disc with ink outline
+  // White disc: soft drop shadow + gentle ring (borderless cartoon look)
   ctx.beginPath()
-  ctx.arc(center, center, center - 1.6 * pixelRatio, 0, Math.PI * 2)
+  ctx.arc(center, center, center - 3 * pixelRatio, 0, Math.PI * 2)
+  ctx.shadowColor = 'rgba(46, 33, 64, 0.28)'
+  ctx.shadowBlur = 3 * pixelRatio
+  ctx.shadowOffsetY = 1.5 * pixelRatio
   ctx.fillStyle = '#ffffff'
   ctx.fill()
-  ctx.lineWidth = 2.4 * pixelRatio
-  ctx.strokeStyle = ink
+  ctx.shadowColor = 'transparent'
+  ctx.shadowBlur = 0
+  ctx.shadowOffsetY = 0
+  ctx.lineWidth = 1.6 * pixelRatio
+  ctx.strokeStyle = 'rgba(46, 33, 64, 0.30)'
   ctx.stroke()
 
   // Icon, centered (24-unit viewBox)
