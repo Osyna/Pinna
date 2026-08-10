@@ -791,6 +791,18 @@ async function locateMe() {
     updateUserMarker()
     const targetZoom = Math.max(map.getZoom(), 14)
     map.flyTo({ center: [pos.lng, pos.lat], zoom: targetZoom, duration: 1200 })
+
+    // Cached jump: when the real fix lands, update the marker — and
+    // follow it if the user actually moved (> ~400 m from the cache)
+    if (pos.cached && pos.fresh) {
+      pos.fresh.then((f) => {
+        updateUserMarker()
+        const moved = Math.hypot(f.lat - pos.lat, f.lng - pos.lng)
+        if (moved > 0.004 && map) {
+          map.flyTo({ center: [f.lng, f.lat], zoom: Math.max(map.getZoom(), 14), duration: 900 })
+        }
+      }).catch(() => {})
+    }
   } catch { /* error handled in composable */ }
 }
 
