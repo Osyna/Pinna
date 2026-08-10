@@ -101,6 +101,13 @@ html,
 body,
 #app {
   height: 100%;
+  /* iOS PWA/standalone: percentage height (and 100vh) can mismatch the
+     real visible viewport once the app runs edge-to-edge with no Safari
+     chrome — the classic cause of a big empty gap below fixed bottom
+     bars that only shows up after "Add to Home Screen". 100dvh tracks
+     the actual visible viewport correctly; falls back to 100% above on
+     browsers that don't support it. */
+  height: 100dvh;
   width: 100%;
   overflow: hidden;
   touch-action: manipulation;
@@ -338,14 +345,6 @@ select {
     border-style: dashed;
     border-width: 2px;
   }
-}
-
-.pp-nearby-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #f59e0b;
-  flex-shrink: 0;
 }
 
 .pp-name {
