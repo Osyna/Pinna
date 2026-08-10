@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cellsForBbox, buildCellQuery, mergeElements, CELL_SIZE, MAX_CELLS } from '../server/lib/overpassGrid.js'
+import { cellsForBbox, buildCellQuery, mergeElements, refineToViewport, distanceMeters, CELL_SIZE, MAX_CELLS } from '../server/lib/overpassGrid.js'
 
 describe('overpass grid', () => {
   it('snaps a small bbox to a bounded set of cells', () => {
@@ -38,5 +38,61 @@ describe('overpass grid', () => {
       [{ id: 2 }, { id: 3 }],
     ])
     expect(merged.map(e => e.id)).toEqual([1, 2, 3])
+  })
+})
+
+describe('refineToViewport (bbox precision + distance order)', () => {
+  const bbox = { south: 50.0, west: 4.0, north: 50.1, east: 4.1 } // ~11km x ~7km, center 50.05,4.05
+
+  it('drops elements outside the requested bbox even if the covering cell is larger', () => {
+    const elements = [
+      { id: 1, lat: 50.05, lon: 4.05 },   // dead center — in view
+      { id: 2, lat: 50.5, lon: 4.5 },     // far outside — cell padding, not viewport
+    ]
+    const out = refineToViewport(elements, bbox)
+    expect(out.map(e => e.id)).toEqual([1])
+  })
+
+  it('keeps points on the edge (small tolerance for float rounding)', () => {
+    const elements = [{ id: 1, lat: 50.1, lon: 4.05 }] // exactly on the north edge
+    const out = refineToViewport(elements, bbox)
+    expect(out.map(e => e.id)).toEqual([1])
+  })
+
+  it('orders surviving elements closest-to-center first', () => {
+    const elements = [
+      { id: 'far', lat: 50.09, lon: 4.09 },
+      { id: 'near', lat: 50.051, lon: 4.051 },
+      { id: 'mid', lat: 50.07, lon: 4.07 },
+    ]
+    const out = refineToViewport(elements, bbox)
+    expect(out.map(e => e.id)).toEqual(['near', 'mid', 'far'])
+  })
+
+  it('caps to the given limit after sorting, so truncation drops the farthest first', () => {
+    const elements = [
+      { id: 'near', lat: 50.051, lon: 4.051 },
+      { id: 'far', lat: 50.09, lon: 4.09 },
+    ]
+    const out = refineToViewport(elements, bbox, 1)
+    expect(out.map(e => e.id)).toEqual(['near'])
+  })
+
+  it('drops elements with missing coordinates rather than crashing', () => {
+    const elements = [{ id: 1, lat: 50.05, lon: 4.05 }, { id: 2 }]
+    const out = refineToViewport(elements, bbox)
+    expect(out.map(e => e.id)).toEqual([1])
+  })
+})
+
+describe('distanceMeters', () => {
+  it('is ~0 for the same point', () => {
+    expect(distanceMeters(48.85, 2.35, 48.85, 2.35)).toBeLessThan(1)
+  })
+
+  it('roughly matches a known real-world distance (Paris <-> London ~344km)', () => {
+    const d = distanceMeters(48.8566, 2.3522, 51.5074, -0.1278)
+    expect(d).toBeGreaterThan(330000)
+    expect(d).toBeLessThan(360000)
   })
 })
