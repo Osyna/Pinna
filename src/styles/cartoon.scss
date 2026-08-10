@@ -1852,6 +1852,43 @@ html[data-skin="cartoon"] {
 
   .toggle-btn { color: $ct-purple; font-weight: 900; }
 
+  /* Install-as-PWA sheet */
+  .pwa-head-text h2 { color: $ct-ink; }
+  .pwa-app-icon { box-shadow: $ct-shadow-chip; }
+
+  .pwa-install-btn {
+    background: $ct-purple;
+    border: none;
+    border-radius: 18px;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(109, 59, 240, 0.35);
+  }
+
+  .pwa-step {
+    background: #fff;
+    box-shadow: $ct-shadow-card;
+  }
+
+  .pwa-step-num {
+    background: $ct-lavender;
+    color: $ct-purple;
+  }
+
+  .pwa-step-text strong { color: $ct-purple; }
+  .pwa-inline-icon { color: $ct-purple; }
+
+  .pwa-generic-note {
+    background: $ct-lavender;
+    color: $ct-body;
+  }
+
+  .pwa-done-btn {
+    background: #fff;
+    border: none;
+    color: $ct-ink;
+    box-shadow: $ct-shadow-chip;
+  }
+
   /* ── 11 · Toasts ───────────────────────────────────────────────── */
   .toast {
     background: #fff;
