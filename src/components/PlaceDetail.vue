@@ -4,6 +4,7 @@ import { usePlacesStore } from '../stores/places'
 import { useAuthStore } from '../stores/auth'
 import { useLinkPreview } from '../composables/useLinkPreview'
 import { hapticTap } from '../composables/useHaptics'
+import { showToast } from '../composables/useToast'
 import { api } from '../api.js'
 import { ACCENT } from '../theme'
 import { iconPathFor } from '../categoryIcons'
@@ -133,6 +134,16 @@ function saveEdit() {
 
 function cancelEdit() {
   isEditing.value = false
+}
+
+function copyAddress() {
+  if (!place.value?.address) return
+  hapticTap()
+  navigator.clipboard.writeText(place.value.address).then(() => {
+    showToast('Address copied!', { type: 'success' })
+  }).catch(() => {
+    showToast('Could not copy', { type: 'error' })
+  })
 }
 
 function deletePlace() {
@@ -350,8 +361,8 @@ function formatDate(ts) {
 
         <!-- Info sections -->
         <div class="info-sections">
-          <!-- Address -->
-          <div v-if="place.address" class="info-row">
+          <!-- Address (tap to copy) -->
+          <button v-if="place.address" class="info-row info-row--copy" title="Tap to copy address" @click="copyAddress">
             <div class="info-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -362,7 +373,11 @@ function formatDate(ts) {
               <span class="info-label">Address</span>
               <span class="info-value">{{ place.address }}</span>
             </div>
-          </div>
+            <svg class="info-copy-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
 
           <!-- Coordinates -->
           <div class="info-row">
@@ -937,6 +952,16 @@ function formatDate(ts) {
   border-bottom: 1px solid var(--border);
 
   &:last-child { border-bottom: none; }
+
+  &.info-row--copy {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border-radius: inherit;
+    cursor: pointer;
+
+    &:active { transform: scale(0.99); }
+  }
 }
 
 .info-icon {
@@ -956,7 +981,17 @@ function formatDate(ts) {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
+
+.info-copy-icon {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.info-row--copy:active .info-copy-icon { opacity: 1; color: var(--accent); }
 
 .info-label {
   font-size: 10px;

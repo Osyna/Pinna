@@ -1620,8 +1620,11 @@ html[data-skin="cartoon"] {
     padding: 10px 12px;
     align-items: center;
     box-shadow: $ct-shadow-card;
+    font-family: $ct-font;
 
     &:last-child { border-bottom: none; }
+
+    &.info-row--copy:active { background: $ct-lavender; }
   }
 
   .info-icon {
