@@ -8,34 +8,71 @@ const locating = ref(false)
 const error = ref('')
 let watchId = null
 
-function locate() {
-  if (!('geolocation' in navigator)) {
-    error.value = 'Geolocation not supported'
-    return Promise.reject(error.value)
-  }
-  locating.value = true
-  error.value = ''
+/* ── Last-known-position cache ──
+   The last good fix is persisted so the locate button can jump to it
+   INSTANTLY (and distances work right at boot), while a fresh fix is
+   fetched in the background to update it when possible. */
+const LS_KEY = 'pinna-last-pos'
+const CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000
 
+function readCachedPosition() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LS_KEY))
+    if (v && typeof v.lat === 'number' && typeof v.lng === 'number' &&
+        Date.now() - (v.ts || 0) < CACHE_MAX_AGE) {
+      return v
+    }
+  } catch { /* corrupt cache */ }
+  return null
+}
+
+function writeCachedPosition() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      lat: userLat.value, lng: userLng.value, accuracy: accuracy.value, ts: Date.now(),
+    }))
+  } catch { /* storage full/blocked */ }
+}
+
+// Hydrate from cache at module load — approximate position immediately
+const boot = readCachedPosition()
+if (boot) {
+  userLat.value = boot.lat
+  userLng.value = boot.lng
+  accuracy.value = boot.accuracy || null
+}
+
+/* Fresh fix with a HARD safety guard: browsers keep getCurrentPosition
+   pending forever while a permission prompt is undecided — the guard
+   guarantees the spinner always ends. */
+function getFreshPosition() {
   return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = (fn, val) => {
+      if (settled) return
+      settled = true
+      clearTimeout(guard)
+      locating.value = false
+      fn(val)
+    }
+    const guard = setTimeout(() => {
+      error.value = 'Location timeout'
+      setTimeout(() => { error.value = '' }, 4000)
+      finish(reject, 'Location timeout')
+    }, 20000)
+
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        applyPosition(pos)
-        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-      },
+      (pos) => { applyPosition(pos); finish(resolve, { lat: pos.coords.latitude, lng: pos.coords.longitude }) },
       () => {
-        // Fallback: low accuracy with very long timeout and stale cache
+        // Fallback: low accuracy, generous staleness
         navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            applyPosition(pos)
-            resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-          },
+          (pos) => { applyPosition(pos); finish(resolve, { lat: pos.coords.latitude, lng: pos.coords.longitude }) },
           (err) => {
-            locating.value = false
             if (err.code === 1) error.value = 'Location access denied'
             else if (err.code === 2) error.value = 'Location unavailable'
             else error.value = 'Location timeout'
             setTimeout(() => { error.value = '' }, 4000)
-            reject(error.value)
+            finish(reject, error.value)
           },
           { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 },
         )
@@ -45,11 +82,40 @@ function locate() {
   })
 }
 
+/**
+ * Locate the user.
+ * With a cached position: resolves IMMEDIATELY with it ({ cached: true,
+ * fresh: Promise }) while the real fix updates refs in the background.
+ * Without: resolves/rejects with the fresh fix (spinner bounded to 20 s).
+ */
+function locate() {
+  if (!('geolocation' in navigator)) {
+    error.value = 'Geolocation not supported'
+    return Promise.reject(error.value)
+  }
+  error.value = ''
+
+  const cached = readCachedPosition()
+  if (cached) {
+    userLat.value = cached.lat
+    userLng.value = cached.lng
+    accuracy.value = cached.accuracy || null
+    locating.value = false
+    const fresh = getFreshPosition()
+    fresh.catch(() => {})
+    return Promise.resolve({ lat: cached.lat, lng: cached.lng, cached: true, fresh })
+  }
+
+  locating.value = true
+  return getFreshPosition()
+}
+
 function applyPosition(pos) {
   userLat.value = pos.coords.latitude
   userLng.value = pos.coords.longitude
   accuracy.value = pos.coords.accuracy
   locating.value = false
+  writeCachedPosition()
 }
 
 /** Start passive background watching — call only from a user gesture handler */
