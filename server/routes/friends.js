@@ -13,7 +13,7 @@ const requestLimiter = rateLimit({
 const FRIEND_SELECT = {
   id: true, name: true, handle: true,
   bio: true, country: true, favoriteCuisines: true,
-  _count: { select: { places: true } },
+  _count: { select: { places: { where: { deletedAt: null } } } },
 }
 
 export default function friendsRoutes(prisma) {

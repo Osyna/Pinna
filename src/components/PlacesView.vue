@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { usePlacesStore } from '../stores/places'
 import { iconPathFor } from '../categoryIcons'
 import { useFriendsStore } from '../stores/friends'
@@ -134,6 +134,44 @@ const sortedPlaces = computed(() => {
     })
 })
 
+/* ── Dynamic (chunked) rendering ──
+   Search, counts and chips always run over the FULL sortedPlaces array
+   (in-memory, instant — no lag, no accuracy loss). Only the DOM gets a
+   bounded window: with 500+ saved places, mounting every card at once
+   (icons, stars, tag lists, thumbnails) is what actually causes jank —
+   not the data itself. The window grows as the user scrolls. */
+const RENDER_BATCH = 60
+const visibleCount = ref(RENDER_BATCH)
+const displayedPlaces = computed(() => sortedPlaces.value.slice(0, visibleCount.value))
+const loadSentinel = ref(null)
+let sentinelObserver = null
+
+// Reset the render window on actual filter changes only — NOT on the
+// distance-driven re-sorts that happen every GPS update (those keep
+// the same result set, just reordered, and shouldn't snap the list
+// back to the top).
+watch([activeCategory, activeList, search, () => friendsStore.viewingFriendId], () => {
+  visibleCount.value = RENDER_BATCH
+  listEl.value?.scrollTo?.({ top: 0 })
+})
+
+function growVisible() {
+  if (visibleCount.value < sortedPlaces.value.length) {
+    visibleCount.value = Math.min(visibleCount.value + RENDER_BATCH, sortedPlaces.value.length)
+  }
+}
+
+watch(loadSentinel, (el) => {
+  sentinelObserver?.disconnect()
+  if (!el) return
+  sentinelObserver = new IntersectionObserver((entries) => {
+    if (entries.some(e => e.isIntersecting)) growVisible()
+  }, { root: listEl.value, rootMargin: '600px 0px' })
+  sentinelObserver.observe(el)
+})
+
+onBeforeUnmount(() => sentinelObserver?.disconnect())
+
 function getCatStyle(catId) {
   const cat = friendsStore.viewingFriendId ? friendsStore.getCategoryById(catId) : store.getCategoryById(catId)
   return { background: cat.color + '20', color: cat.color }
@@ -264,9 +302,57 @@ function contextAction(action) {
         <h1 class="pv-title">{{ friendsStore.viewingFriendId ? (friendsStore.viewingFriendInfo?.name?.split(' ')[0] || 'Friend') + "'s Places" : 'My Places' }}</h1>
         <span class="pv-count">{{ activePlaceCount }} saved</span>
       </div>
-      <button v-if="!friendsStore.viewingFriendId" class="pv-select-btn" :class="{ on: selectMode }" @click="toggleSelectMode">
-        {{ selectMode ? 'Cancel' : 'Select' }}
-      </button>
+      <div v-if="!friendsStore.viewingFriendId" class="pv-header-actions">
+        <button class="pv-icon-btn" :class="{ on: showTrash }" title="Recently Deleted" aria-label="Recently Deleted" @click="toggleTrash">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+          <span v-if="store.trashedPlaces.length" class="pv-icon-badge">{{ store.trashedPlaces.length }}</span>
+        </button>
+        <button class="pv-select-btn" :class="{ on: selectMode }" @click="toggleSelectMode">
+          {{ selectMode ? 'Cancel' : 'Select' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Recently Deleted panel (floating, opened from the header icon) -->
+    <div v-if="showTrash" class="pv-trash-overlay" @click="showTrash = false"></div>
+    <div v-if="showTrash" class="pv-trash-card">
+      <div class="pv-trash-card-head">
+        <span>Recently Deleted</span>
+        <button @click="showTrash = false">Done</button>
+      </div>
+      <p v-if="!store.trashedPlaces.length" class="pv-trash-empty">
+        Nothing here — deleted places stay recoverable for 30 days.
+      </p>
+      <div v-else class="pv-trash-list">
+        <div v-for="p in store.trashedPlaces" :key="p.id" class="pv-trash-row">
+          <span class="pv-cat-icon small" :style="{ background: getCat(p.category).color + '22', color: getCat(p.category).color }">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path :d="iconPathFor(getCat(p.category).icon)" />
+            </svg>
+          </span>
+          <div class="pv-trash-info">
+            <span class="pv-trash-name">{{ p.name }}</span>
+            <span class="pv-trash-date">deleted {{ trashDate(p.deletedAt) }}</span>
+          </div>
+          <template v-if="purgeConfirmId === p.id">
+            <span class="pv-trash-ask">Forever?</span>
+            <button class="pv-trash-btn danger" @click="doPurge(p.id)">Yes</button>
+            <button class="pv-trash-btn" @click="purgeConfirmId = null">No</button>
+          </template>
+          <template v-else>
+            <button class="pv-trash-btn restore" @click="store.restorePlace(p.id)">Restore</button>
+            <button class="pv-trash-btn danger icon" title="Delete forever" @click="purgeConfirmId = p.id">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          </template>
+        </div>
+      </div>
     </div>
 
     <!-- Search -->
@@ -366,7 +452,7 @@ function contextAction(action) {
       </div>
 
       <button
-        v-for="place in sortedPlaces" :key="place.id"
+        v-for="place in displayedPlaces" :key="place.id"
         :class="['pv-card', 'contain-item', { selected: selectMode && selectedIds.has(place.id), selecting: selectMode }]"
         @click="onCardClick(place)"
         @touchstart.passive="onCardPressStart($event, place)"
@@ -405,51 +491,10 @@ function contextAction(action) {
         </svg>
       </button>
 
-      <!-- Recently Deleted -->
-      <div v-if="!friendsStore.viewingFriendId" class="pv-trash-section">
-        <button class="pv-trash-toggle" @click="toggleTrash">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-          </svg>
-          <span>Recently Deleted</span>
-          <span v-if="store.trashedPlaces.length" class="pv-trash-count">{{ store.trashedPlaces.length }}</span>
-          <svg class="pv-trash-chevron" :style="{ transform: showTrash ? 'rotate(90deg)' : 'none' }" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
-
-        <div v-if="showTrash" class="pv-trash-list">
-          <p v-if="!store.trashedPlaces.length" class="pv-trash-empty">
-            Nothing here — deleted places stay recoverable for 30 days.
-          </p>
-          <div v-for="p in store.trashedPlaces" :key="p.id" class="pv-trash-row">
-            <span class="pv-cat-icon small" :style="{ background: getCat(p.category).color + '22', color: getCat(p.category).color }">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <path :d="iconPathFor(getCat(p.category).icon)" />
-              </svg>
-            </span>
-            <div class="pv-trash-info">
-              <span class="pv-trash-name">{{ p.name }}</span>
-              <span class="pv-trash-date">deleted {{ trashDate(p.deletedAt) }}</span>
-            </div>
-            <template v-if="purgeConfirmId === p.id">
-              <span class="pv-trash-ask">Forever?</span>
-              <button class="pv-trash-btn danger" @click="doPurge(p.id)">Yes</button>
-              <button class="pv-trash-btn" @click="purgeConfirmId = null">No</button>
-            </template>
-            <template v-else>
-              <button class="pv-trash-btn restore" @click="store.restorePlace(p.id)">Restore</button>
-              <button class="pv-trash-btn danger icon" title="Delete forever" @click="purgeConfirmId = p.id">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                </svg>
-              </button>
-            </template>
-          </div>
-        </div>
-      </div>
+      <!-- Sentinel: grows the rendered window as the user scrolls, so
+           541 places never get rendered/diffed at once (search/counts
+           still run over the FULL list — only DOM rendering is chunked) -->
+      <div v-if="displayedPlaces.length < sortedPlaces.length" ref="loadSentinel" class="pv-load-sentinel"></div>
     </div>
 
     <!-- Context menu overlay -->
