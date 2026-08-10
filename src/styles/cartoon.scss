@@ -1643,6 +1643,54 @@ html[data-skin="cartoon"] {
 
   .info-label { font-weight: 900; }
 
+  .place-added { color: $ct-muted; }
+
+  .hero-tags .tag-pill {
+    background: #fff;
+    box-shadow: $ct-shadow-chip;
+  }
+
+  /* Address + Coordinates merged pill */
+  .addr-card {
+    background: #fff;
+    box-shadow: $ct-shadow-card;
+  }
+
+  .addr-row:active { background: $ct-lavender; }
+
+  .addr-divider { background: rgba(46, 33, 64, 0.08); }
+
+  .coords-toggle {
+    color: $ct-ink;
+    &:active { background: $ct-lavender; }
+  }
+
+  .coords-toggle-label { color: $ct-body; }
+  .coords-chevron { color: $ct-muted; }
+
+  .coords-panel { background: $ct-lavender; }
+  .coords-value { color: $ct-ink; }
+
+  .coords-copy-btn {
+    background: #fff;
+    color: $ct-purple;
+    box-shadow: $ct-shadow-chip;
+  }
+
+  /* Notes — bigger, distinct "sticky note" card */
+  .notes-card {
+    background: #fdf3d5;
+    box-shadow: $ct-shadow-card;
+  }
+
+  .notes-card-icon {
+    background: #fff;
+    color: #e8930c;
+  }
+
+  .notes-card-label { color: #b9780a; }
+  .notes-card-text { color: $ct-ink; }
+
   .list-chip {
     background: $ct-lavender;
     border: none;
