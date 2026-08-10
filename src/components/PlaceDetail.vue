@@ -956,7 +956,10 @@ function formatDate(ts) {
   &.info-row--copy {
     width: 100%;
     text-align: left;
-    background: none;
+    /* don't touch background here — cartoon.scss owns the card
+       background; a scoped reset previously out-specified it and made
+       this row fall through to the page backdrop instead of staying
+       white like its siblings */
     border-radius: inherit;
     cursor: pointer;
 

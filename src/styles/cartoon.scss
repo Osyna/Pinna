@@ -1624,6 +1624,11 @@ html[data-skin="cartoon"] {
 
     &:last-child { border-bottom: none; }
 
+    /* explicit (not just inherited) — a component-scoped button reset
+       has the same class count + an extra [data-v] attribute, which
+       can out-specify a bare .info-row rule; keep this card's actual
+       color decided here regardless */
+    &.info-row--copy { background: #fff; }
     &.info-row--copy:active { background: $ct-lavender; }
   }
 
