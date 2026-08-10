@@ -407,7 +407,16 @@ function formatDate(ts) {
 
           <div v-if="place.address" class="addr-divider"></div>
 
-          <button class="coords-toggle" :aria-expanded="showCoords" @click="showCoords = !showCoords">
+          <div
+            class="coords-toggle"
+            role="button"
+            tabindex="0"
+            :aria-expanded="showCoords"
+            aria-label="Toggle coordinates"
+            @click="showCoords = !showCoords"
+            @keydown.enter="showCoords = !showCoords"
+            @keydown.space.prevent="showCoords = !showCoords"
+          >
             <div class="info-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <circle cx="12" cy="12" r="10"/>
@@ -415,23 +424,27 @@ function formatDate(ts) {
                 <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
               </svg>
             </div>
-            <span class="coords-toggle-label">Coordinates</span>
-            <svg :class="['coords-chevron', { open: showCoords }]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
-          </button>
-          <transition name="coords-expand">
-            <div v-if="showCoords" class="coords-panel">
+
+            <!-- Collapsed: just the label + a chevron inviting a tap -->
+            <template v-if="!showCoords">
+              <span class="coords-toggle-label">Coordinates</span>
+              <svg class="coords-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </template>
+
+            <!-- Expanded: the label IS replaced by the value, same single row -->
+            <template v-else>
               <span class="coords-value mono">{{ place.lat.toFixed(5) }}, {{ place.lng.toFixed(5) }}</span>
-              <button class="coords-copy-btn" @click="copyCoordinates">
+              <button class="coords-copy-btn" title="Copy coordinates" @click.stop="copyCoordinates">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="9" y="9" width="13" height="13" rx="2"/>
                   <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
                 </svg>
                 Copy
               </button>
-            </div>
-          </transition>
+            </template>
+          </div>
         </div>
 
         <!-- Notes -->
@@ -1038,6 +1051,7 @@ function formatDate(ts) {
 
 /* ── Address + Coordinates: one pill, coordinates collapsed ── */
 .addr-card {
+  margin: 0 22px 12px;
   border-radius: 16px;
   overflow: hidden;
 }
@@ -1071,10 +1085,6 @@ function formatDate(ts) {
   padding: 12px;
   text-align: left;
   cursor: pointer;
-  background: transparent; // reset the browser's default button-face gray
-  border: none;
-  font: inherit;
-  color: inherit;
 
   &:active { opacity: 0.8; }
 }
@@ -1087,21 +1097,16 @@ function formatDate(ts) {
 
 .coords-chevron {
   flex-shrink: 0;
-  transition: transform 0.2s ease;
-  &.open { transform: rotate(180deg); }
 }
 
-.coords-panel {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px 12px 60px;
-}
-
+/* Expanded state: the label is replaced in place by the value + a
+   copy action — same row, same height, no accordion panel below */
 .coords-value {
   flex: 1;
-  font-size: 13px;
+  font-size: 13.5px;
+  font-weight: 700;
   word-break: break-word;
+  animation: ct-pop 0.15s ease both;
 }
 
 .coords-copy-btn {
@@ -1119,25 +1124,10 @@ function formatDate(ts) {
   &:active { transform: scale(0.96); }
 }
 
-.coords-expand-enter-active,
-.coords-expand-leave-active {
-  transition: max-height 0.22s ease, opacity 0.18s ease;
-  overflow: hidden;
-}
-.coords-expand-enter-from,
-.coords-expand-leave-to {
-  max-height: 0;
-  opacity: 0;
-}
-.coords-expand-enter-to,
-.coords-expand-leave-from {
-  max-height: 60px;
-  opacity: 1;
-}
-
 /* ── Notes: bigger, distinct "note" card ── */
 .notes-card {
-  padding: 16px 18px;
+  margin: 0 22px 12px;
+  padding: 18px 20px;
   border-radius: 20px;
 }
 

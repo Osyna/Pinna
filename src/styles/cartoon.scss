@@ -1662,19 +1662,17 @@ html[data-skin="cartoon"] {
 
   .coords-toggle {
     color: $ct-ink;
+    border-radius: 12px;
     &:active { background: $ct-lavender; }
   }
 
   .coords-toggle-label { color: $ct-body; }
   .coords-chevron { color: $ct-muted; }
-
-  .coords-panel { background: $ct-lavender; }
-  .coords-value { color: $ct-ink; }
+  .coords-value { color: $ct-purple; }
 
   .coords-copy-btn {
-    background: #fff;
+    background: $ct-lavender;
     color: $ct-purple;
-    box-shadow: $ct-shadow-chip;
   }
 
   /* Notes — bigger, distinct "sticky note" card */
