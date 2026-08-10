@@ -22,6 +22,62 @@ const mapRef = ref(null)
 const activeTab = ref('map')
 const detailPlaceId = ref(null)
 
+/* ── Smooth tab transitions + navbar swipe ── */
+const TAB_ORDER = ['map', 'search', 'places', 'friends', 'profile']
+function effectiveTab(tab) {
+  // Viewing a friend's map keeps the URL/tab at 'map' but visually belongs to 'friends'
+  return (tab === 'map' && friendsStore.viewingFriendId) ? 'friends' : tab
+}
+const slideDirection = ref('next')
+watch(activeTab, (next, prev) => {
+  const a = TAB_ORDER.indexOf(effectiveTab(prev))
+  const b = TAB_ORDER.indexOf(effectiveTab(next))
+  slideDirection.value = b >= a ? 'next' : 'prev'
+})
+const viewTransitionName = computed(() => `view-slide-${slideDirection.value}`)
+
+function goAdjacentTab(delta) {
+  const idx = TAB_ORDER.indexOf(effectiveTab(activeTab.value))
+  const nextIdx = Math.min(TAB_ORDER.length - 1, Math.max(0, idx + delta))
+  const nextTab = TAB_ORDER[nextIdx]
+  if (nextTab !== effectiveTab(activeTab.value)) switchTab(nextTab)
+}
+
+// Swipe left/right ON the tab bar to move to the next/previous view
+let tabSwipeStartX = 0
+let tabSwipeStartY = 0
+let tabSwipeDeltaX = 0
+let tabSwiping = false
+const SWIPE_THRESHOLD = 40
+
+function onTabsTouchStart(e) {
+  const t = e.touches[0]
+  tabSwipeStartX = t.clientX
+  tabSwipeStartY = t.clientY
+  tabSwipeDeltaX = 0
+  tabSwiping = false
+}
+function onTabsTouchMove(e) {
+  const t = e.touches[0]
+  const dx = t.clientX - tabSwipeStartX
+  const dy = t.clientY - tabSwipeStartY
+  if (!tabSwiping && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
+    tabSwiping = true
+  }
+  if (tabSwiping) tabSwipeDeltaX = dx
+}
+function onTabsTouchEnd(e) {
+  if (tabSwiping) {
+    // Swallow the synthetic click a swipe would otherwise fire on the
+    // button under the finger (would switch to a random adjacent tab)
+    e.preventDefault()
+    if (tabSwipeDeltaX <= -SWIPE_THRESHOLD) goAdjacentTab(1)
+    else if (tabSwipeDeltaX >= SWIPE_THRESHOLD) goAdjacentTab(-1)
+  }
+  tabSwiping = false
+  tabSwipeDeltaX = 0
+}
+
 const isOffline = ref(!navigator.onLine)
 const showSplash = ref(true)
 const splashFinished = ref(false)
@@ -154,47 +210,54 @@ function onSplashFinish() {
     
     <div class="app-root" :class="{ 'pre-reveal': !splashFinished }">
       <!-- Map (Always rendered, but UI elements inside animate) -->
-      <div v-show="activeTab === 'map'" class="map-layer">
-        <MapView
-          ref="mapRef"
-          :splash-finished="splashFinished"
-          @show-detail="onShowDetail"
-          @add-place="onAddPlace"
-        />
-        <SearchBar
-          v-if="!showSplash"
-          :map-ref="mapRef"
-          :class="{ 'build-anim build-anim--drop build-anim--delay-1': splashFinished }"
-          @select="onSearchSelect"
-        />
-      </div>
+      <Transition :name="viewTransitionName">
+        <div v-show="activeTab === 'map'" class="map-layer">
+          <MapView
+            ref="mapRef"
+            :splash-finished="splashFinished"
+            @show-detail="onShowDetail"
+            @add-place="onAddPlace"
+          />
+          <SearchBar
+            v-if="!showSplash"
+            :map-ref="mapRef"
+            :class="{ 'build-anim build-anim--drop build-anim--delay-1': splashFinished }"
+            @select="onSearchSelect"
+          />
+        </div>
+      </Transition>
 
       <div v-if="!showSplash" class="main-content-layer">
         <AuthModal v-if="!authStore.isAuthenticated && !authStore.loading" />
         <div v-else-if="authStore.isAuthenticated" class="tab-content-wrapper">
-          <!-- Search view -->
-          <SearchView
-            v-if="activeTab === 'search'"
-            @show-detail="onShowDetail"
-            @select="onSearchSelect"
-            @add-place="onAddPlace"
-          />
+          <Transition :name="viewTransitionName">
+            <!-- Search view -->
+            <SearchView
+              v-if="activeTab === 'search'"
+              key="search"
+              @show-detail="onShowDetail"
+              @select="onSearchSelect"
+              @add-place="onAddPlace"
+            />
 
-          <!-- Places view -->
-          <PlacesView
-            v-if="activeTab === 'places'"
-            @show-detail="onShowDetail"
-            @add-place="onAddPlace"
-          />
+            <!-- Places view -->
+            <PlacesView
+              v-else-if="activeTab === 'places'"
+              key="places"
+              @show-detail="onShowDetail"
+              @add-place="onAddPlace"
+            />
 
-          <!-- Friends view -->
-          <FriendsView
-            v-if="activeTab === 'friends'"
-            @view-friend-map="onViewFriendMap"
-          />
+            <!-- Friends view -->
+            <FriendsView
+              v-else-if="activeTab === 'friends'"
+              key="friends"
+              @view-friend-map="onViewFriendMap"
+            />
 
-          <!-- Profile view -->
-          <ProfileView v-if="activeTab === 'profile'" />
+            <!-- Profile view -->
+            <ProfileView v-else-if="activeTab === 'profile'" key="profile" />
+          </Transition>
         </div>
       </div>
 
@@ -206,8 +269,14 @@ function onSplashFinish() {
         </div>
       </transition>
 
-      <!-- Bottom tab bar -->
-      <div v-if="!showSplash" class="bottom-tabs line-anim">
+      <!-- Bottom tab bar (swipe left/right to move to the next/previous view) -->
+      <div
+        v-if="!showSplash"
+        class="bottom-tabs line-anim"
+        @touchstart.passive="onTabsTouchStart"
+        @touchmove.passive="onTabsTouchMove"
+        @touchend="onTabsTouchEnd"
+      >
         <div class="tab-indicator" :style="tabIndicatorStyle"></div>
         <button :class="['tab-btn', 'tab--map', { active: activeTab === 'map' && !friendsStore.viewingFriendId }, { 'build-anim build-anim--slide build-anim--delay-1': splashFinished }]" aria-label="Map" @click="switchTab('map')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -288,6 +357,39 @@ function onSplashFinish() {
 .app-shell { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg-primary); }
 .app-root { position: relative; width: 100%; height: 100%; overflow: hidden; }
 .map-layer { position: absolute; inset: 0; z-index: 1; }
+
+// ─── Smooth cross-tab transitions ───
+// Both the map layer and the tab-content-wrapper's view share these same
+// class names (bound to the same computed direction), so switching to/from
+// the map tab feels like one continuous motion even though the map is a
+// permanently-mounted v-show element and the other views mount/unmount.
+.view-slide-next-enter-active,
+.view-slide-next-leave-active,
+.view-slide-prev-enter-active,
+.view-slide-prev-leave-active {
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
+}
+
+.view-slide-next-enter-from { transform: translateX(18px); opacity: 0; }
+.view-slide-next-leave-to { transform: translateX(-14px); opacity: 0; }
+.view-slide-prev-enter-from { transform: translateX(-18px); opacity: 0; }
+.view-slide-prev-leave-to { transform: translateX(14px); opacity: 0; }
+
+// Reduced motion: keep it a simple, fast crossfade
+@media (prefers-reduced-motion: reduce) {
+  .view-slide-next-enter-active,
+  .view-slide-next-leave-active,
+  .view-slide-prev-enter-active,
+  .view-slide-prev-leave-active {
+    transition: opacity 0.15s ease;
+  }
+  .view-slide-next-enter-from,
+  .view-slide-next-leave-to,
+  .view-slide-prev-enter-from,
+  .view-slide-prev-leave-to {
+    transform: none;
+  }
+}
 
 // Bottom tab bar
 .bottom-tabs {

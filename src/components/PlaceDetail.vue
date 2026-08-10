@@ -4,6 +4,7 @@ import { usePlacesStore } from '../stores/places'
 import { useAuthStore } from '../stores/auth'
 import { useLinkPreview } from '../composables/useLinkPreview'
 import { hapticTap } from '../composables/useHaptics'
+import { showToast } from '../composables/useToast'
 import { api } from '../api.js'
 import { ACCENT } from '../theme'
 import { iconPathFor } from '../categoryIcons'
@@ -116,6 +117,7 @@ watch(() => props.placeId, () => {
   showDeleteConfirm.value = false
   showLoading.value = false
   showFriendList.value = false
+  showCoords.value = false
 })
 
 function startEdit() {
@@ -133,6 +135,29 @@ function saveEdit() {
 
 function cancelEdit() {
   isEditing.value = false
+}
+
+const showCoords = ref(false)
+
+function copyCoordinates() {
+  if (!place.value) return
+  hapticTap()
+  const text = `${place.value.lat.toFixed(5)}, ${place.value.lng.toFixed(5)}`
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Coordinates copied!', { type: 'success' })
+  }).catch(() => {
+    showToast('Could not copy', { type: 'error' })
+  })
+}
+
+function copyAddress() {
+  if (!place.value?.address) return
+  hapticTap()
+  navigator.clipboard.writeText(place.value.address).then(() => {
+    showToast('Address copied!', { type: 'success' })
+  }).catch(() => {
+    showToast('Could not copy', { type: 'error' })
+  })
 }
 
 function deletePlace() {
@@ -258,7 +283,15 @@ function formatDate(ts) {
                 <path :d="iconPathFor(category?.icon)" />
               </svg>
             </span>
-            <h2 class="place-name">{{ place.name }}</h2>
+            <div class="place-name-col">
+              <h2 class="place-name">{{ place.name }}</h2>
+              <span v-if="place.createdAt" class="place-added">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Added {{ formatDate(place.createdAt) }}
+              </span>
+            </div>
           </div>
 
           <!-- Rating -->
@@ -270,6 +303,11 @@ function formatDate(ts) {
           <!-- Cuisine badge -->
           <div v-if="place.cuisine && place.cuisine !== 'None'" class="cuisine-badge">
             {{ place.cuisine }}
+          </div>
+
+          <!-- Tags (moved up: right under the header, after the date) -->
+          <div v-if="place.tags && place.tags.length" class="hero-tags">
+            <span v-for="tag in place.tags" :key="tag" class="tag-pill">{{ tag }}</span>
           </div>
 
           <!-- Friends who saved this place -->
@@ -348,10 +386,9 @@ function formatDate(ts) {
           </button>
         </div>
 
-        <!-- Info sections -->
-        <div class="info-sections">
-          <!-- Address -->
-          <div v-if="place.address" class="info-row">
+        <!-- Address + Coordinates (one pill; coordinates collapsed by default) -->
+        <div v-if="place.address || (place.lat != null && place.lng != null)" class="addr-card">
+          <button v-if="place.address" class="addr-row" title="Tap to copy address" @click="copyAddress">
             <div class="info-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -362,10 +399,24 @@ function formatDate(ts) {
               <span class="info-label">Address</span>
               <span class="info-value">{{ place.address }}</span>
             </div>
-          </div>
+            <svg class="info-copy-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
 
-          <!-- Coordinates -->
-          <div class="info-row">
+          <div v-if="place.address" class="addr-divider"></div>
+
+          <div
+            class="coords-toggle"
+            role="button"
+            tabindex="0"
+            :aria-expanded="showCoords"
+            aria-label="Toggle coordinates"
+            @click="showCoords = !showCoords"
+            @keydown.enter="showCoords = !showCoords"
+            @keydown.space.prevent="showCoords = !showCoords"
+          >
             <div class="info-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <circle cx="12" cy="12" r="10"/>
@@ -373,51 +424,43 @@ function formatDate(ts) {
                 <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
               </svg>
             </div>
-            <div class="info-text">
-              <span class="info-label">Coordinates</span>
-              <span class="info-value mono">{{ place.lat.toFixed(5) }}, {{ place.lng.toFixed(5) }}</span>
-            </div>
-          </div>
 
-          <!-- Notes -->
-          <div v-if="place.notes" class="info-row">
-            <div class="info-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <!-- Collapsed: just the label + a chevron inviting a tap -->
+            <template v-if="!showCoords">
+              <span class="coords-toggle-label">Coordinates</span>
+              <svg class="coords-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </template>
+
+            <!-- Expanded: the label IS replaced by the value, same single row -->
+            <template v-else>
+              <span class="coords-value mono">{{ place.lat.toFixed(5) }}, {{ place.lng.toFixed(5) }}</span>
+              <button class="coords-copy-btn" title="Copy coordinates" @click.stop="copyCoordinates">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                Copy
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div v-if="place.notes" class="notes-card">
+          <div class="notes-card-head">
+            <span class="notes-card-icon">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
                 <line x1="16" y1="13" x2="8" y2="13"/>
                 <line x1="16" y1="17" x2="8" y2="17"/>
               </svg>
-            </div>
-            <div class="info-text">
-              <span class="info-label">Notes</span>
-              <span class="info-value">{{ place.notes }}</span>
-            </div>
+            </span>
+            <span class="notes-card-label">Notes</span>
           </div>
-
-          <!-- Added date -->
-          <div v-if="place.createdAt" class="info-row">
-            <div class="info-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-            </div>
-            <div class="info-text">
-              <span class="info-label">Added</span>
-              <span class="info-value">{{ formatDate(place.createdAt) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tags -->
-        <div v-if="place.tags && place.tags.length" class="tags-section">
-          <span class="tags-label">Tags</span>
-          <div class="tags-list">
-            <span v-for="tag in place.tags" :key="tag" class="tag-pill">{{ tag }}</span>
-          </div>
+          <p class="notes-card-text">{{ place.notes }}</p>
         </div>
 
         <!-- Lists -->
@@ -700,7 +743,7 @@ function formatDate(ts) {
 
 .place-name-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 11px;
   margin-bottom: 8px;
 }
@@ -718,12 +761,37 @@ function formatDate(ts) {
   svg { display: block; }
 }
 
+.place-name-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .place-name {
   font-size: 24px;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.02em;
   min-width: 0;
+}
+
+.place-added {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: fit-content;
+}
+
+.hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
 }
 
 .place-rating {
@@ -937,6 +1005,19 @@ function formatDate(ts) {
   border-bottom: 1px solid var(--border);
 
   &:last-child { border-bottom: none; }
+
+  &.info-row--copy {
+    width: 100%;
+    text-align: left;
+    /* don't touch background here — cartoon.scss owns the card
+       background; a scoped reset previously out-specified it and made
+       this row fall through to the page backdrop instead of staying
+       white like its siblings */
+    border-radius: inherit;
+    cursor: pointer;
+
+    &:active { transform: scale(0.99); }
+  }
 }
 
 .info-icon {
@@ -956,6 +1037,129 @@ function formatDate(ts) {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
+}
+
+.info-copy-icon {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.info-row--copy:active .info-copy-icon { opacity: 1; color: var(--accent); }
+
+/* ── Address + Coordinates: one pill, coordinates collapsed ── */
+.addr-card {
+  margin: 0 22px 12px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.addr-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+  background: transparent; // reset the browser's default button-face gray
+  border: none;
+  font: inherit;
+  color: inherit;
+
+  &:active { transform: scale(0.99); }
+}
+
+.addr-divider {
+  height: 1px;
+  margin: 0 12px;
+}
+
+.coords-toggle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+
+  &:active { opacity: 0.8; }
+}
+
+.coords-toggle-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.coords-chevron {
+  flex-shrink: 0;
+}
+
+/* Expanded state: the label is replaced in place by the value + a
+   copy action — same row, same height, no accordion panel below */
+.coords-value {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 700;
+  word-break: break-word;
+  animation: ct-pop 0.15s ease both;
+}
+
+.coords-copy-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+
+  &:active { transform: scale(0.96); }
+}
+
+/* ── Notes: bigger, distinct "note" card ── */
+.notes-card {
+  margin: 0 22px 12px;
+  padding: 18px 20px;
+  border-radius: 20px;
+}
+
+.notes-card-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.notes-card-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notes-card-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.notes-card-text {
+  font-size: 15.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .info-label {
