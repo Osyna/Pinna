@@ -3,7 +3,8 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { usePlacesStore } from '../stores/places'
 import { useFriendsStore } from '../stores/friends'
 import { useGeocoding } from '../composables/useGeocoding'
-import { iconPathFor } from '../categoryIcons'
+import { iconPathFor, amenityStyle } from '../categoryIcons'
+import CategoryIconBubble from './CategoryIconBubble.vue'
 import { useFuseSearch } from '../composables/useFuseSearch'
 import { useUserLocation } from '../composables/useUserLocation'
 import { useRecentSearches } from '../composables/useRecentSearches'
@@ -33,16 +34,19 @@ function onChipRowWheel(e) {
   e.currentTarget.scrollLeft += (e.deltaY || 0) + (e.deltaX || 0)
 }
 
+// icon + color always derived from the shared palette (categoryIcons.js)
+// so these chips can never drift from what the map/search-preview pins
+// show for the same type — only the filter's own key/label lives here.
 const PLACE_FILTERS = [
-  { key: 'restaurant', label: 'Restaurant', icon: 'utensils', color: '#FF3B30' },
-  { key: 'cafe', label: 'Cafe', icon: 'coffee', color: '#FF9500' },
-  { key: 'bar', label: 'Bar', icon: 'glass', color: '#AF52DE' },
-  { key: 'hotel', label: 'Hotel', icon: 'bed', color: '#30B0C7' },
-  { key: 'shop', label: 'Shop', icon: 'bag', color: '#FF66CC' },
-  { key: 'museum', label: 'Museum', icon: 'museum', color: '#007AFF' },
-  { key: 'park', label: 'Park', icon: 'tree', color: '#34C759' },
-  { key: 'pharmacy', label: 'Pharmacy', icon: 'cross', color: '#38c172' },
-]
+  { key: 'restaurant', label: 'Restaurant' },
+  { key: 'cafe', label: 'Cafe' },
+  { key: 'bar', label: 'Bar' },
+  { key: 'hotel', label: 'Hotel' },
+  { key: 'shop', label: 'Shop' },
+  { key: 'museum', label: 'Museum' },
+  { key: 'park', label: 'Park' },
+  { key: 'pharmacy', label: 'Pharmacy' },
+].map(f => ({ ...f, ...amenityStyle(f.key) }))
 
 const COUNTRIES = [
   { code: '', label: 'All countries' },
@@ -440,7 +444,7 @@ function getCatStyle(catId) {
           >
             <button class="sv-card-main" @click="selectOsm(result)">
               <div class="sv-card-left">
-                <div :class="['sv-type-dot', { food: result.isFoodDrink }]"></div>
+                <CategoryIconBubble :icon="amenityStyle(result.type).icon" :color="amenityStyle(result.type).color" :size="30" :icon-size="15" />
               </div>
               <div class="sv-card-body">
                 <div class="sv-card-top">
@@ -923,19 +927,6 @@ function getCatStyle(catId) {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-}
-
-.sv-type-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  opacity: 0.5;
-
-  &.food {
-    background: var(--accent);
-    opacity: 1;
-  }
 }
 
 .sv-card-body {

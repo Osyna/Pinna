@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { usePlacesStore } from '../stores/places'
 import { iconPathFor } from '../categoryIcons'
+import CategoryIconBubble from './CategoryIconBubble.vue'
 import { useFriendsStore } from '../stores/friends'
 import { useFuseSearch } from '../composables/useFuseSearch'
 import { useUserLocation } from '../composables/useUserLocation'
@@ -328,11 +329,7 @@ function contextAction(action) {
       </p>
       <div v-else class="pv-trash-list">
         <div v-for="p in store.trashedPlaces" :key="p.id" class="pv-trash-row">
-          <span class="pv-cat-icon small" :style="{ background: getCat(p.category).color + '22', color: getCat(p.category).color }">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <path :d="iconPathFor(getCat(p.category).icon)" />
-            </svg>
-          </span>
+          <CategoryIconBubble :icon="getCat(p.category).icon" :color="getCat(p.category).color" :size="26" :icon-size="13" radius="9px" />
           <div class="pv-trash-info">
             <span class="pv-trash-name">{{ p.name }}</span>
             <span class="pv-trash-date">deleted {{ trashDate(p.deletedAt) }}</span>
@@ -463,11 +460,7 @@ function contextAction(action) {
           <svg v-if="selectedIds.has(place.id)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
         </span>
         <div class="pv-card-left">
-          <span class="pv-cat-icon" :style="{ background: getCat(place.category).color + '22', color: getCat(place.category).color }">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <path :d="iconPathFor(getCat(place.category).icon)" />
-            </svg>
-          </span>
+          <CategoryIconBubble :icon="getCat(place.category).icon" :color="getCat(place.category).color" :size="30" :icon-size="16" radius="10px" />
         </div>
         <div class="pv-card-body">
           <div class="pv-card-top">
@@ -719,23 +712,7 @@ function contextAction(action) {
   border-radius: 50%;
 }
 
-.pv-cat-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
 
-  svg { display: block; }
-
-  &.small {
-    width: 26px;
-    height: 26px;
-    border-radius: 9px;
-    flex-shrink: 0;
-  }
-}
 
 .pv-card-body {
   flex: 1;

@@ -32,18 +32,69 @@ export function categoryIconSvg(iconName, { size = 15, strokeWidth = 2.6 } = {})
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"><path d="${iconPathFor(iconName)}"></path></svg>`
 }
 
-/* OSM amenity -> icon + color (same palette as saved categories) */
+/* ── Canonical category palette ──────────────────────────────────────
+ * Single source of truth for every "kind of place" the app knows about
+ * — both the user's own saveable categories (My Places / category
+ * picker) and the OSM amenity/shop/tourism vocabulary used for
+ * unsaved places (nearby results, search previews). Every component
+ * and store should import icon/color pairs from here instead of
+ * hand-rolling its own copy — that drift is exactly how a friend's
+ * "Restaurant" category once ended up a different shade of red than
+ * your own. */
+export const DEFAULT_CATEGORIES = [
+  { id: 'favorite', name: 'Favorites', color: '#FFD700', icon: 'star' },
+  { id: 'restaurant', name: 'Restaurant', color: '#FF3B30', icon: 'utensils' },
+  { id: 'bar', name: 'Bar', color: '#AF52DE', icon: 'glass' },
+  { id: 'cafe', name: 'Cafe', color: '#FF9500', icon: 'coffee' },
+  { id: 'brunch', name: 'Brunch', color: '#FF2D55', icon: 'brunch' },
+  { id: 'fast-food', name: 'Fast Food', color: '#FFCC00', icon: 'burger' },
+  { id: 'bakery', name: 'Bakery', color: '#A0522D', icon: 'bread' },
+  { id: 'nightclub', name: 'Nightclub', color: '#5856D6', icon: 'music' },
+  { id: 'shopping', name: 'Shopping', color: '#FF66CC', icon: 'bag' },
+  { id: 'nature', name: 'Nature', color: '#34C759', icon: 'tree' },
+  { id: 'culture', name: 'Culture', color: '#007AFF', icon: 'museum' },
+  { id: 'hotel', name: 'Hotel', color: '#30B0C7', icon: 'bed' },
+  { id: 'other', name: 'Other', color: '#8E8E93', icon: 'pin' },
+]
+
+function byCategoryId(id) {
+  const cat = DEFAULT_CATEGORIES.find((c) => c.id === id)
+  return { icon: cat?.icon || 'pin', color: cat?.color || '#8E8E93' }
+}
+
+/* OSM amenity/shop/tourism "type" value -> icon + color, mapped onto
+   the same palette as DEFAULT_CATEGORIES above (derived, not
+   hand-duplicated) so a nearby or search-preview pin always matches
+   the color you'd see if you saved that place under the equivalent
+   category. */
 export const AMENITY_STYLE = {
-  restaurant: { icon: 'utensils', color: '#FF3B30' },
-  bar: { icon: 'glass', color: '#AF52DE' },
-  pub: { icon: 'glass', color: '#AF52DE' },
-  biergarten: { icon: 'glass', color: '#AF52DE' },
-  cafe: { icon: 'coffee', color: '#FF9500' },
-  fast_food: { icon: 'burger', color: '#FFCC00' },
-  food_court: { icon: 'burger', color: '#FFCC00' },
-  ice_cream: { icon: 'brunch', color: '#FF2D55' },
-  bakery: { icon: 'bread', color: '#A0522D' },
-  nightclub: { icon: 'music', color: '#5856D6' },
+  restaurant: byCategoryId('restaurant'),
+  bar: byCategoryId('bar'),
+  pub: byCategoryId('bar'),
+  biergarten: byCategoryId('bar'),
+  cafe: byCategoryId('cafe'),
+  fast_food: byCategoryId('fast-food'),
+  food_court: byCategoryId('fast-food'),
+  ice_cream: byCategoryId('brunch'),
+  bakery: byCategoryId('bakery'),
+  nightclub: byCategoryId('nightclub'),
+  hotel: byCategoryId('hotel'),
+  motel: byCategoryId('hotel'),
+  guest_house: byCategoryId('hotel'),
+  hostel: byCategoryId('hotel'),
+  shop: byCategoryId('shopping'),
+  supermarket: byCategoryId('shopping'),
+  mall: byCategoryId('shopping'),
+  museum: byCategoryId('culture'),
+  gallery: byCategoryId('culture'),
+  artwork: byCategoryId('culture'),
+  attraction: byCategoryId('culture'),
+  park: byCategoryId('nature'),
+  garden: byCategoryId('nature'),
+  viewpoint: byCategoryId('nature'),
+  // Not part of DEFAULT_CATEGORIES (adding it there would change what every new
+  // account is seeded with) — kept as its own explicit entry instead.
+  pharmacy: { icon: 'cross', color: '#38c172' },
 }
 
 export function amenityStyle(amenity) {

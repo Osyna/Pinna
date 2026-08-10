@@ -146,7 +146,7 @@ async function onSearchSelect(result) {
     if (mapRef.value) mapRef.value.showTempPin({
       lat: result.lat, lng: result.lng,
       name: result.name, address: result.fullName || result.address || '',
-      website: result.website || '',
+      website: result.website || '', amenity: result.type || '',
     })
   }
 }
