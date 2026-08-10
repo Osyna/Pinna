@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, shallowRef, computed, watch } from 'vue'
 import { api } from '../api.js'
 import { showToast } from '../composables/useToast'
+import { DEFAULT_CATEGORIES } from '../categoryIcons'
 
 export const ICON_TO_CATEGORY = {
   restaurant: 'restaurant',
@@ -125,22 +126,6 @@ function mergeGeoJSONWithCSV(geojsonPlaces, csvRows) {
     return place
   })
 }
-
-const DEFAULT_CATEGORIES = [
-  { id: 'favorite', name: 'Favorites', color: '#FFD700', icon: 'star' },
-  { id: 'restaurant', name: 'Restaurant', color: '#FF3B30', icon: 'utensils' },
-  { id: 'bar', name: 'Bar', color: '#AF52DE', icon: 'glass' },
-  { id: 'cafe', name: 'Cafe', color: '#FF9500', icon: 'coffee' },
-  { id: 'brunch', name: 'Brunch', color: '#FF2D55', icon: 'brunch' },
-  { id: 'fast-food', name: 'Fast Food', color: '#FFCC00', icon: 'burger' },
-  { id: 'bakery', name: 'Bakery', color: '#A0522D', icon: 'bread' },
-  { id: 'nightclub', name: 'Nightclub', color: '#5856D6', icon: 'music' },
-  { id: 'shopping', name: 'Shopping', color: '#FF66CC', icon: 'bag' },
-  { id: 'nature', name: 'Nature', color: '#34C759', icon: 'tree' },
-  { id: 'culture', name: 'Culture', color: '#007AFF', icon: 'museum' },
-  { id: 'hotel', name: 'Hotel', color: '#30B0C7', icon: 'bed' },
-  { id: 'other', name: 'Other', color: '#8E8E93', icon: 'pin' },
-]
 
 const CUISINE_TYPES = [
   'None',

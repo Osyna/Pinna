@@ -340,28 +340,32 @@ function setupCustomLayers() {
     },
   })
 
-  // Temp pin (search result preview)
+  // Temp pin (search result preview) — same visual language as nearby
+  // results: dashed-ring icon-in-a-bubble marker ("found, not saved
+  // yet"), plus the soft white halo used for the selected saved-place
+  // marker to make clear this is the one you're currently looking at.
   map.addLayer({
     id: 'temp-pin-glow',
     type: 'circle',
     source: 'temp-pin',
     paint: {
-      'circle-radius': 18,
-      'circle-color': 'transparent',
-      'circle-stroke-width': 3,
-      'circle-stroke-color': ACCENT,
+      'circle-radius': 22,
+      'circle-color': '#ffffff',
+      'circle-opacity': 0,
+      'circle-stroke-width': 4,
+      'circle-stroke-color': '#ffffff',
       'circle-stroke-opacity': 0.3,
     },
   })
   map.addLayer({
-    id: 'temp-pin-dot',
-    type: 'circle',
+    id: 'temp-pin-icon',
+    type: 'symbol',
     source: 'temp-pin',
-    paint: {
-      'circle-radius': 9,
-      'circle-color': ACCENT,
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#ffffff',
+    layout: {
+      'icon-image': ['get', 'iconId'],
+      'icon-size': 1.15,
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
     },
   })
 
@@ -457,7 +461,7 @@ function setupClickHandlers() {
   })
 
   // Temp pin click — reopen popup without re-flying
-  map.on('click', 'temp-pin-dot', () => {
+  map.on('click', 'temp-pin-icon', () => {
     if (tempPinData) {
       showTempPin(tempPinData, { skipFly: true })
     }
@@ -465,7 +469,7 @@ function setupClickHandlers() {
 
   // Click outside any feature — close popup
   map.on('click', (e) => {
-    const hitLayers = ['nearby-circles', 'temp-pin-dot', 'places-circles', 'places-selected', 'places-clusters', 'places-cluster-count', 'nearby-clusters', 'nearby-cluster-count']
+    const hitLayers = ['nearby-circles', 'temp-pin-icon', 'places-circles', 'places-selected', 'places-clusters', 'places-cluster-count', 'nearby-clusters', 'nearby-cluster-count']
     const features = map.queryRenderedFeatures(e.point, { layers: hitLayers.filter(l => map.getLayer(l)) })
     if (features.length === 0) {
       nearbyPopup.remove()
@@ -473,7 +477,7 @@ function setupClickHandlers() {
   })
 
   // Cursor changes
-  for (const layer of ['places-circles', 'places-selected', 'nearby-circles', 'places-clusters', 'places-cluster-count', 'nearby-clusters', 'nearby-cluster-count', 'temp-pin-dot']) {
+  for (const layer of ['places-circles', 'places-selected', 'nearby-circles', 'places-clusters', 'places-cluster-count', 'nearby-clusters', 'nearby-cluster-count', 'temp-pin-icon']) {
     map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer' })
     map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
   }
@@ -809,23 +813,28 @@ async function locateMe() {
 /* ─── Temp pin for search result preview ─── */
 let tempPinData = null
 
-function showTempPin({ lat, lng, name, address, website }, { skipFly = false } = {}) {
+function showTempPin({ lat, lng, name, address, website, amenity = '' }, { skipFly = false } = {}) {
   if (!map || !map.getSource('temp-pin')) return
-  tempPinData = { lat, lng, name, address, website }
+  tempPinData = { lat, lng, name, address, website, amenity }
   map.getSource('temp-pin').setData({
     type: 'FeatureCollection',
     features: [{
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [lng, lat] },
-      properties: { name, address },
+      // Same dashed-ring icon-in-a-bubble style as "nearby" results —
+      // this is an unsaved place preview too, just from a search
+      // instead of a viewport scan. Unrecognized/absent amenity types
+      // (plain address search, etc.) fall back to a generic pin icon.
+      properties: { name, address, iconId: nearbyImageId(amenity) },
     }],
   })
 
   const popupId = 'temp-pin-add'
+  const { icon: tpIcon, color: tpColor } = amenityStyle(amenity)
   const html = `
     <div class="place-preview nearby">
       <div class="pp-header">
-        <span class="pp-nearby-dot"></span>
+        <span class="pp-cat-icon nearby" style="color:${tpColor};border-color:${tpColor}">${categoryIconSvg(tpIcon, { size: 13 })}</span>
         <span class="pp-name">${name}</span>
       </div>
       ${address ? `<div class="pp-addr">${address}</div>` : ''}

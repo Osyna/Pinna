@@ -82,3 +82,44 @@ export function mergeElements(cellResults, limit = 200) {
   }
   return out
 }
+
+/** Haversine distance in meters — cheap enough for a per-request sort of ≤a few hundred points. */
+export function distanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000
+  const toRad = (d) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+
+/**
+ * Grid cells always fully cover the requested bbox, so they routinely
+ * extend past it — a query near a cell edge otherwise returns markers
+ * that sit outside the viewport the user actually asked about. This
+ * trims the merged set back down to what was really requested (with a
+ * small buffer so points right on the edge aren't lost to float
+ * rounding), then orders by distance to the viewport center so any
+ * later truncation drops the farthest points first, not an arbitrary
+ * OSM-id-ordered tail.
+ */
+export function refineToViewport(elements, bbox, limit = 200) {
+  const { south, west, north, east } = bbox
+  const padLat = (north - south) * 0.02
+  const padLng = (east - west) * 0.02
+  const inView = elements.filter((el) => {
+    if (el?.lat == null || el?.lon == null) return false
+    return (
+      el.lat >= south - padLat &&
+      el.lat <= north + padLat &&
+      el.lon >= west - padLng &&
+      el.lon <= east + padLng
+    )
+  })
+  const cLat = (south + north) / 2
+  const cLng = (west + east) / 2
+  inView.sort((a, b) => distanceMeters(a.lat, a.lon, cLat, cLng) - distanceMeters(b.lat, b.lon, cLat, cLng))
+  return inView.slice(0, limit)
+}

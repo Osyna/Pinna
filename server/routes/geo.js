@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { authenticate } from '../middleware/auth.js'
-import { cellsForBbox, buildCellQuery, mergeElements } from '../lib/overpassGrid.js'
+import { cellsForBbox, buildCellQuery, mergeElements, refineToViewport } from '../lib/overpassGrid.js'
 
 /**
  * Server-side proxy for the public geo services (Nominatim, Overpass, OSRM)
@@ -14,13 +14,19 @@ import { cellsForBbox, buildCellQuery, mergeElements } from '../lib/overpassGrid
  */
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org'
+// The two well-established, genuinely global public instances. A third
+// candidate (overpass.osm.ch) was tested and dropped: it answers fast
+// but turned out to be a *regional* Swiss mirror — 120 real elements
+// for Zurich, 0 for Lyon/Paris/Berlin. A fast wrong answer (silently
+// "no places found") is worse than a slow right one, so it's not
+// worth the availability gain. fetchOverpass() below reorders these
+// around whichever is currently healthy (see the circuit breaker).
 const OVERPASS_MIRRORS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ]
-const OVERPASS = OVERPASS_MIRRORS[0]
 const OSRM = 'https://router.project-osrm.org/route/v1/driving'
-const UA = 'Pinna/1.0 (+https://maps.osyna.com)'
+const UA = 'Pinna/1.0 (+https://maps.osyna.sh)'
 
 const cache = new Map() // key -> { t, ttl, status, body }
 const MAX_CACHE = 500
@@ -49,40 +55,140 @@ const CELL_SOFT_TTL = 24 * 60 * 60 * 1000        // fresh: serve as-is
 const CELL_HARD_TTL = 14 * 24 * 60 * 60 * 1000   // stale beyond this: blocking refetch
 const cellRefreshing = new Set()
 
+/* ── Tiny concurrency limiter ──────────────────────────────────────
+ * Public Overpass instances allow only ~2 concurrent slots per IP;
+ * since every user shares our server's IP, firing all of a request's
+ * missing cells (or several requests' worth) at once is the single
+ * fastest way to get 429'd. This caps *process-wide* outbound Overpass
+ * concurrency instead of per-request, so bursts queue briefly rather
+ * than triggering rate limits. */
+function createLimiter(max) {
+  let active = 0
+  const queue = []
+  const next = () => {
+    if (active >= max || queue.length === 0) return
+    active++
+    const { fn, resolve, reject } = queue.shift()
+    fn().then(resolve, reject).finally(() => { active--; next() })
+  }
+  return (fn) => new Promise((resolve, reject) => { queue.push({ fn, resolve, reject }); next() })
+}
+const overpassLimiter = createLimiter(3)
+
+/**
+ * Hard ceiling on the "fetch missing cells" stage, independent of how
+ * many mirrors are down or how slow they are. Whatever settles within
+ * the deadline is returned; stragglers keep running in the background
+ * (still writing to the cache for the next request) instead of holding
+ * the HTTP response open. Guarantees /nearby always answers promptly
+ * even during a full upstream outage — cache-hit cells still show
+ * instantly, empty results beat a hung spinner.
+ */
+function settleWithDeadline(promises, ms) {
+  return new Promise((resolve) => {
+    const results = promises.map(() => ({ status: 'pending' }))
+    let settledCount = 0
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      resolve(results.map((r) => (r.status === 'pending' ? { status: 'rejected', reason: new Error('deadline') } : r)))
+    }
+    const timer = setTimeout(finish, ms)
+    promises.forEach((p, i) => {
+      p.then(
+        (value) => { results[i] = { status: 'fulfilled', value } },
+        (reason) => { results[i] = { status: 'rejected', reason } },
+      ).finally(() => {
+        settledCount++
+        if (settledCount === promises.length) finish()
+      })
+    })
+    if (promises.length === 0) finish()
+  })
+}
+let MISSING_CELLS_DEADLINE_MS = 14000
+
+/** Test-only hook: swap in a tiny deadline so the mechanism can be
+ * verified without a real multi-second sleep in the test suite. */
+export function _setMissingCellsDeadlineForTests(ms) {
+  MISSING_CELLS_DEADLINE_MS = ms
+}
+
+/* ── Per-mirror circuit breaker ─────────────────────────────────────
+ * A mirror that just 429'd or timed out is far more likely to fail
+ * again in the next few seconds than a mirror we haven't touched —
+ * so skip it for a cooldown instead of re-eating its timeout on every
+ * subsequent request. Recovers on its own once the cooldown elapses. */
+const MIRROR_COOLDOWN_MS = 45 * 1000
+const mirrorPenaltyUntil = new Map() // base url -> timestamp
+
+function healthyMirrorOrder() {
+  const now = Date.now()
+  const healthy = []
+  const penalized = []
+  for (const base of OVERPASS_MIRRORS) {
+    ;((mirrorPenaltyUntil.get(base) || 0) > now ? penalized : healthy).push(base)
+  }
+  // Shuffle the healthy pool so a burst of concurrent cell fetches (up to
+  // overpassLimiter's concurrency) spreads its *first* attempt across
+  // different mirrors instead of every one of them herding onto the same
+  // "still looks fine to me" mirror before any single one has failed
+  // fast enough to teach the circuit breaker. Penalized mirrors stay last
+  // and in a fixed order — no point randomizing among known-bad options.
+  for (let i = healthy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[healthy[i], healthy[j]] = [healthy[j], healthy[i]]
+  }
+  return [...healthy, ...penalized]
+}
+
+function penalizeMirror(base) {
+  mirrorPenaltyUntil.set(base, Date.now() + MIRROR_COOLDOWN_MS)
+}
+
 async function fetchOverpass(query) {
   let lastErr = null
-  for (const base of OVERPASS_MIRRORS) {
+  for (const base of healthyMirrorOrder()) {
     try {
-      const resp = await fetch(base, {
+      const resp = await overpassLimiter(() => fetch(base, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA },
         body: 'data=' + encodeURIComponent(query),
-        signal: AbortSignal.timeout(20000),
-      })
+        signal: AbortSignal.timeout(6000),
+      }))
       if (resp.status === 429 || resp.status >= 500) {
+        penalizeMirror(base)
         lastErr = new Error(`upstream ${resp.status}`)
-        continue // rotate to the next mirror
+        continue // rotate to the next (healthy) mirror
       }
       return resp
     } catch (err) {
+      penalizeMirror(base) // timeout / network error — likely to repeat, back off
       lastErr = err
     }
   }
   throw lastErr || new Error('all overpass mirrors failed')
 }
 
-async function cellGet(key) {
-  if (!prismaRef) return null
+/** Batched cache lookup — one round trip for every cell instead of one per cell. */
+async function cellGetMany(keys) {
+  const out = new Map()
+  if (!prismaRef || keys.length === 0) return out
   try {
-    const row = await prismaRef.geoCache.findUnique({ where: { key } })
-    if (!row) return null
-    const remaining = row.expiresAt.getTime() - Date.now()
-    if (remaining <= 0) return null
-    return {
-      elements: JSON.parse(row.body),
-      fresh: remaining > CELL_HARD_TTL - CELL_SOFT_TTL,
+    const rows = await prismaRef.geoCache.findMany({ where: { key: { in: keys } } })
+    const now = Date.now()
+    for (const row of rows) {
+      const remaining = row.expiresAt.getTime() - now
+      if (remaining <= 0) continue
+      out.set(row.key, {
+        elements: JSON.parse(row.body),
+        fresh: remaining > CELL_HARD_TTL - CELL_SOFT_TTL,
+      })
     }
-  } catch { return null }
+  } catch { /* cache miss on error is fine, upstream fetch covers it */ }
+  return out
 }
 
 function cellPut(key, elements) {
@@ -95,13 +201,26 @@ function cellPut(key, elements) {
   prismaRef.geoCache.upsert({ where: { key }, create: { key, ...data }, update: data }).catch(() => {})
 }
 
-async function fetchCell(cell) {
+async function fetchCellRaw(cell) {
   const resp = await fetchOverpass(buildCellQuery(cell.bbox))
   if (!resp.ok) throw new Error(`overpass ${resp.status}`)
   const data = await resp.json().catch(() => null)
   const elements = data?.elements || []
   cellPut(cell.key, elements)
   return elements
+}
+
+/* In-flight de-dupe: several requests (different users, or a fast
+ * double-click) hitting the same still-missing cell at once should
+ * trigger exactly one upstream Overpass call, not one each. */
+const cellInFlight = new Map() // key -> Promise<elements>
+
+function fetchCell(cell) {
+  const existing = cellInFlight.get(cell.key)
+  if (existing) return existing
+  const p = fetchCellRaw(cell).finally(() => cellInFlight.delete(cell.key))
+  cellInFlight.set(cell.key, p)
+  return p
 }
 
 function revalidateCell(cell) {
@@ -220,8 +339,10 @@ export default function geoRoutes(prisma = null) {
       let freshN = 0, staleN = 0, missN = 0
       const missing = []
 
+      // One batched lookup for every cell instead of one DB round trip each.
+      const hits = await cellGetMany(cells.map((c) => c.key))
       for (const cell of cells) {
-        const hit = await cellGet(cell.key)
+        const hit = hits.get(cell.key)
         if (hit) {
           results.push(hit.elements)
           if (hit.fresh) freshN++
@@ -231,14 +352,23 @@ export default function geoRoutes(prisma = null) {
         }
       }
 
-      const fetched = await Promise.allSettled(missing.map(c => fetchCell(c)))
+      // fetchCell() is both concurrency-limited (process-wide) and
+      // in-flight-deduped, so this can safely fire all missing cells
+      // at once — they'll queue behind the shared Overpass limiter
+      // rather than bursting the upstream.
+      const fetched = await settleWithDeadline(missing.map((c) => fetchCell(c)), MISSING_CELLS_DEADLINE_MS)
       for (const f of fetched) {
         missN++
         if (f.status === 'fulfilled') results.push(f.value)
       }
 
+      // Cells always fully cover the bbox and can extend past it —
+      // trim back to what was actually asked for, closest-first, so
+      // truncation (if any) never drops the most relevant results.
+      const elements = refineToViewport(mergeElements(results, 600), { south, west, north, east }, 200)
+
       res.set('X-Geo-Cells', `total=${cells.length} fresh=${freshN} stale=${staleN} miss=${missN}`)
-      res.json({ elements: mergeElements(results) })
+      res.json({ elements })
     } catch {
       res.status(502).json({ error: 'Geo service unavailable' })
     }

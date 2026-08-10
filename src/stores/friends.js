@@ -2,22 +2,12 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api } from '../api.js'
 import { showToast } from '../composables/useToast'
-
-const DEFAULT_CATEGORIES = [
-  { id: 'favorite', name: 'Favorites', color: '#f59e0b', icon: 'star' },
-  { id: 'restaurant', name: 'Restaurant', color: '#ef4444', icon: 'utensils' },
-  { id: 'bar', name: 'Bar', color: '#a855f7', icon: 'glass' },
-  { id: 'cafe', name: 'Cafe', color: '#f97316', icon: 'coffee' },
-  { id: 'brunch', name: 'Brunch', color: '#ec4899', icon: 'brunch' },
-  { id: 'fast-food', name: 'Fast Food', color: '#eab308', icon: 'burger' },
-  { id: 'bakery', name: 'Bakery', color: '#d97706', icon: 'bread' },
-  { id: 'nightclub', name: 'Nightclub', color: '#7c3aed', icon: 'music' },
-  { id: 'shopping', name: 'Shopping', color: '#8b5cf6', icon: 'bag' },
-  { id: 'nature', name: 'Nature', color: '#22c55e', icon: 'tree' },
-  { id: 'culture', name: 'Culture', color: '#3b82f6', icon: 'museum' },
-  { id: 'hotel', name: 'Hotel', color: '#0ea5e9', icon: 'bed' },
-  { id: 'other', name: 'Other', color: '#14b8a6', icon: 'pin' },
-]
+import { DEFAULT_CATEGORIES } from '../categoryIcons'
+// ^ Was previously its own hand-maintained copy with a stale Tailwind-esque
+// palette (#ef4444, #a855f7, #f97316...) left over from before the cartoon
+// theme — a friend without custom categories would show "Restaurant" in a
+// visibly different red than your own places. Now sourced from the same
+// place as everything else so it can never drift again.
 
 export const useFriendsStore = defineStore('friends', () => {
   const friends = ref([])
