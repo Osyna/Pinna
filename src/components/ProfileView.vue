@@ -4,10 +4,12 @@ import { useAuthStore } from '../stores/auth'
 import { usePlacesStore } from '../stores/places'
 import { useFriendsStore } from '../stores/friends'
 import { showToast } from '../composables/useToast'
+import { usePwaInstall } from '../composables/usePwaInstall'
 
 const authStore = useAuthStore()
 const placesStore = usePlacesStore()
 const friendsStore = useFriendsStore()
+const pwaInstall = usePwaInstall()
 
 const editing = ref(false)
 const saving = ref(false)
@@ -453,6 +455,22 @@ async function removeAvatar() {
         <h3 class="pf-section-title">Settings</h3>
 
         <div class="pf-settings-card">
+          <!-- Install as app (hidden once already installed) -->
+          <button v-if="!pwaInstall.isStandalone.value" class="pf-setting-row clickable" @click="pwaInstall.open()">
+            <div class="pf-setting-label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <line x1="12" y1="18" x2="12.01" y2="18"/>
+              </svg>
+              <span>Install App</span>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+
+          <div v-if="!pwaInstall.isStandalone.value" class="pf-setting-divider"></div>
+
           <!-- Change password -->
           <button class="pf-setting-row clickable" @click="showPwSection = !showPwSection">
             <div class="pf-setting-label">

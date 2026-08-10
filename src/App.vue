@@ -10,6 +10,8 @@ const AddPlaceModal = defineAsyncComponent(() => import('./components/AddPlaceMo
 import PlaceDetail from './components/PlaceDetail.vue'
 const AuthModal = defineAsyncComponent(() => import('./components/AuthModal.vue'))
 import AppToast from './components/AppToast.vue'
+import InstallPwaSheet from './components/InstallPwaSheet.vue'
+import { usePwaInstall } from './composables/usePwaInstall'
 import SplashScreen from './components/SplashScreen.vue'
 import { useAuthStore } from './stores/auth'
 import { usePlacesStore } from './stores/places'
@@ -96,6 +98,7 @@ const authStore = useAuthStore()
 const placesStore = usePlacesStore()
 const friendsStore = useFriendsStore()
 const { initTheme } = useTheme()
+const { maybeAutoShow: maybeShowInstallPrompt } = usePwaInstall()
 
 onMounted(async () => {
   initTheme()
@@ -196,6 +199,10 @@ function onSplashFinish() {
   setTimeout(() => {
     showSplash.value = false
   }, 10)
+  // Give the app a moment to feel settled before nudging toward installing it
+  setTimeout(() => {
+    maybeShowInstallPrompt()
+  }, 1600)
 }
 </script>
 
@@ -340,6 +347,7 @@ function onSplashFinish() {
       />
     </div>
     <AppToast />
+    <InstallPwaSheet />
   </div>
 </template>
 
