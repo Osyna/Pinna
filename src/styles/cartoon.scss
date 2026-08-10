@@ -9,7 +9,7 @@
    · Accent purple #6d3bf0 · yellow #ffc94a · ink text #2e2140
    · Category identity = icon + color (tinted chips), everywhere
    · 'Baloo 2' display + Nunito body · press-down buttons · pop/bob motion
-   · Thin outlines only as accents: legend chips, tags, dashed cards
+   · Thin outlines only as accents: tags, dashed cards
    ════════════════════════════════════════════════════════════════════ */
 
 $ct-ink: #2e2140;
@@ -361,17 +361,18 @@ html[data-skin="cartoon"] {
     display: flex;
     align-items: center;
     gap: 8px;
-    border: 2px solid rgba(46, 33, 64, 0.75);
+    border: none;
     border-radius: 14px;
     padding: 7px 9px;
     cursor: pointer;
     text-align: left;
     background: #fff;
-    transition: opacity 0.15s ease;
+    box-shadow: $ct-shadow-chip;
+    transition: opacity 0.15s ease, box-shadow 0.15s ease;
 
     &.off {
       opacity: 0.4;
-      border-color: rgba(46, 33, 64, 0.25);
+      box-shadow: none;
       background: $ct-track !important;
     }
   }
@@ -382,7 +383,8 @@ html[data-skin="cartoon"] {
     flex: none;
     border-radius: 8px;
     background: #fff;
-    border: 1.5px solid rgba(46, 33, 64, 0.55);
+    border: none;
+    box-shadow: $ct-shadow-chip;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1757,19 +1759,6 @@ html[data-skin="cartoon"] {
     color: #e8453c;
   }
 
-  .edit-field {
-    input, textarea, select {
-      background: #fff;
-      border: none !important;
-      border-radius: 15px;
-      font-weight: 800;
-      color: $ct-ink;
-      box-shadow: inset 0 0 0 1.5px rgba(46, 33, 64, 0.12);
-
-      &:focus { box-shadow: inset 0 0 0 2px rgba(109, 59, 240, 0.55); }
-    }
-  }
-
   .star-btn { color: $ct-yellow; }
 
   /* ── 10 · Modals ───────────────────────────────────────────────── */
@@ -1799,6 +1788,65 @@ html[data-skin="cartoon"] {
     }
 
     label { font-weight: 900; }
+  }
+
+  /* Shared Save/Edit Place form (PlaceFormFields.vue) — one canonical
+     set of rules instead of the old .field/.edit-field pair that had
+     already drifted (the latter wasn't even reached by this theme). */
+  .pff-input {
+    background: #fff;
+    border: none;
+    border-radius: 16px;
+    color: $ct-ink;
+    box-shadow: $ct-shadow-chip;
+    transition: box-shadow 0.15s ease;
+
+    &::placeholder { color: $ct-muted; font-weight: 600; }
+
+    &:focus {
+      box-shadow: 0 3px 12px rgba(109, 59, 240, 0.18), inset 0 0 0 2px rgba(109, 59, 240, 0.5);
+    }
+  }
+
+  .pff-select-chevron { color: $ct-muted; }
+
+  .pff-cat-chip {
+    background: #fff;
+    box-shadow: $ct-shadow-chip;
+    color: $ct-ink;
+  }
+
+  .pff-star-btn { color: rgba(46, 33, 64, 0.25); }
+  .pff-rating-label { color: $ct-purple; }
+
+  .pff-tag-wrap {
+    background: #fff;
+    box-shadow: $ct-shadow-chip;
+    transition: box-shadow 0.15s ease;
+
+    &:focus-within {
+      box-shadow: 0 3px 12px rgba(109, 59, 240, 0.18), inset 0 0 0 2px rgba(109, 59, 240, 0.5);
+    }
+  }
+
+  .pff-tag {
+    background: $ct-lavender;
+    color: $ct-purple;
+  }
+
+  .pff-tag-remove { color: $ct-purple; }
+
+  .pff-notes {
+    background: rgba(255, 201, 74, 0.16);
+
+    &:focus {
+      background: rgba(255, 201, 74, 0.24);
+    }
+  }
+
+  .coords-row {
+    background: $ct-lavender;
+    color: $ct-body;
   }
 
   .tag {

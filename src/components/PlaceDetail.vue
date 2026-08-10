@@ -8,6 +8,7 @@ import { showToast } from '../composables/useToast'
 import { api } from '../api.js'
 import { ACCENT } from '../theme'
 import { iconPathFor } from '../categoryIcons'
+import PlaceFormFields from './PlaceFormFields.vue'
 
 const props = defineProps({
   placeId: { type: String, default: null },
@@ -31,8 +32,7 @@ const { imageUrl: previewImage, loading: previewLoading } = useLinkPreview(place
 
 const isEditing = ref(false)
 const editForm = ref({})
-const editTagInput = ref('')
-const hoverRating = ref(0)
+const editCategory = computed(() => editForm.value.category ? store.getCategoryById(editForm.value.category) : null)
 const showDeleteConfirm = ref(false)
 const newListMode = ref(false)
 const newListName = ref('')
@@ -137,6 +137,10 @@ function cancelEdit() {
   isEditing.value = false
 }
 
+function onEditFormUpdate(next) {
+  editForm.value = next
+}
+
 const showCoords = ref(false)
 
 function copyCoordinates() {
@@ -163,22 +167,6 @@ function copyAddress() {
 function deletePlace() {
   store.removePlace(props.placeId)
   emit('close')
-}
-
-function addEditTag() {
-  const tag = editTagInput.value.trim().toLowerCase()
-  if (tag && !editForm.value.tags.includes(tag)) {
-    editForm.value.tags.push(tag)
-  }
-  editTagInput.value = ''
-}
-
-function removeEditTag(tag) {
-  editForm.value.tags = editForm.value.tags.filter(t => t !== tag)
-}
-
-function setEditRating(val) {
-  editForm.value.rating = editForm.value.rating === val ? 0 : val
 }
 
 function renderStars(rating) {
@@ -240,11 +228,16 @@ function formatDate(ts) {
         <div class="hero-accent"></div>
         <div class="hero-content">
           <div class="hero-top">
-            <div class="cat-pill" :style="{ background: (category?.color || ACCENT) + '25', color: category?.color }">
+            <div
+              class="cat-pill"
+              :style="isEditing
+                ? { background: (editCategory?.color || ACCENT) + '25', color: editCategory?.color }
+                : { background: (category?.color || ACCENT) + '25', color: category?.color }"
+            >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-                <path :d="iconPathFor(category?.icon)" />
+                <path :d="iconPathFor(isEditing ? editCategory?.icon : category?.icon)" />
               </svg>
-              {{ category?.name }}
+              {{ isEditing ? (editCategory?.name || '…') : category?.name }}
             </div>
             <div class="hero-btns">
               <button v-if="!readonly && !isEditing" class="hero-icon-btn" title="Edit place" aria-label="Edit place" @click="startEdit">
@@ -277,69 +270,77 @@ function formatDate(ts) {
             </div>
           </div>
 
-          <div class="place-name-row">
-            <span class="place-cat-icon" :style="{ background: (category?.color || ACCENT) + '22', color: category?.color || ACCENT }">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <path :d="iconPathFor(category?.icon)" />
-              </svg>
-            </span>
-            <div class="place-name-col">
-              <h2 class="place-name">{{ place.name }}</h2>
-              <span v-if="place.createdAt" class="place-added">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          <!-- View mode: name, rating, cuisine, tags, friend matches -->
+          <template v-if="!isEditing">
+            <div class="place-name-row">
+              <span class="place-cat-icon" :style="{ background: (category?.color || ACCENT) + '22', color: category?.color || ACCENT }">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="iconPathFor(category?.icon)" />
                 </svg>
-                Added {{ formatDate(place.createdAt) }}
               </span>
+              <div class="place-name-col">
+                <h2 class="place-name">{{ place.name }}</h2>
+                <span v-if="place.createdAt" class="place-added">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  Added {{ formatDate(place.createdAt) }}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <!-- Rating -->
-          <div v-if="place.rating" class="place-rating">
-            <span class="stars">{{ renderStars(place.rating) }}</span>
-            <span class="rating-num">{{ place.rating }}/5</span>
-          </div>
+            <!-- Rating -->
+            <div v-if="place.rating" class="place-rating">
+              <span class="stars">{{ renderStars(place.rating) }}</span>
+              <span class="rating-num">{{ place.rating }}/5</span>
+            </div>
 
-          <!-- Cuisine badge -->
-          <div v-if="place.cuisine && place.cuisine !== 'None'" class="cuisine-badge">
-            {{ place.cuisine }}
-          </div>
+            <!-- Cuisine badge -->
+            <div v-if="place.cuisine && place.cuisine !== 'None'" class="cuisine-badge">
+              {{ place.cuisine }}
+            </div>
 
-          <!-- Tags (moved up: right under the header, after the date) -->
-          <div v-if="place.tags && place.tags.length" class="hero-tags">
-            <span v-for="tag in place.tags" :key="tag" class="tag-pill">{{ tag }}</span>
-          </div>
+            <!-- Tags (moved up: right under the header, after the date) -->
+            <div v-if="place.tags && place.tags.length" class="hero-tags">
+              <span v-for="tag in place.tags" :key="tag" class="tag-pill">{{ tag }}</span>
+            </div>
 
-          <!-- Friends who saved this place -->
-          <div v-if="friendMatches.length > 0" class="friend-match">
-            <button v-if="friendMatches.length <= 2" class="friend-match-pill" @click="showFriendList = !showFriendList">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
-              </svg>
-              <span>{{ friendMatches.map(f => f.name?.split(' ')[0] || f.handle).join(' & ') }} saved this too</span>
-            </button>
-            <button v-else class="friend-match-pill" @click="showFriendList = !showFriendList">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
-              </svg>
-              <span>{{ friendMatches.length }} friends saved this</span>
-              <svg :class="['friend-match-chevron', { open: showFriendList }]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </button>
-            <transition name="fm-expand">
-              <div v-if="showFriendList && friendMatches.length > 2" class="friend-match-list">
-                <div v-for="f in friendMatches" :key="f.id" class="friend-match-item">
-                  <div class="friend-match-avatar">{{ (f.name || f.handle || '?')[0].toUpperCase() }}</div>
-                  <div class="friend-match-info">
-                    <span class="friend-match-name">{{ f.name || f.handle }}</span>
-                    <span v-if="f.handle" class="friend-match-handle">@{{ f.handle }}</span>
+            <!-- Friends who saved this place -->
+            <div v-if="friendMatches.length > 0" class="friend-match">
+              <button v-if="friendMatches.length <= 2" class="friend-match-pill" @click="showFriendList = !showFriendList">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                </svg>
+                <span>{{ friendMatches.map(f => f.name?.split(' ')[0] || f.handle).join(' & ') }} saved this too</span>
+              </button>
+              <button v-else class="friend-match-pill" @click="showFriendList = !showFriendList">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+                <span>{{ friendMatches.length }} friends saved this</span>
+                <svg :class="['friend-match-chevron', { open: showFriendList }]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <transition name="fm-expand">
+                <div v-if="showFriendList && friendMatches.length > 2" class="friend-match-list">
+                  <div v-for="f in friendMatches" :key="f.id" class="friend-match-item">
+                    <div class="friend-match-avatar">{{ (f.name || f.handle || '?')[0].toUpperCase() }}</div>
+                    <div class="friend-match-info">
+                      <span class="friend-match-name">{{ f.name || f.handle }}</span>
+                      <span v-if="f.handle" class="friend-match-handle">@{{ f.handle }}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </transition>
-          </div>
+              </transition>
+            </div>
+          </template>
+
+          <!-- Edit mode: replaces the static display with a lightweight heading — the
+               actual fields (including category) live in the form below, so nothing
+               here should duplicate what's now editable. -->
+          <h2 v-else class="edit-title">Edit Place</h2>
         </div>
       </div>
 
@@ -491,89 +492,21 @@ function formatDate(ts) {
 
       <!-- Edit mode -->
       <div v-else class="detail-body edit-mode">
-        <div class="edit-field">
-          <label>Name</label>
-          <input v-model="editForm.name" type="text" placeholder="Place name" />
-        </div>
-
-        <div class="edit-field">
-          <label>Address</label>
-          <input v-model="editForm.address" type="text" placeholder="Address" />
-        </div>
-
-        <div class="edit-row">
-          <div class="edit-field">
-            <label>Category</label>
-            <select v-model="editForm.category">
-              <option v-for="cat in store.categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-            </select>
-          </div>
-          <div class="edit-field">
-            <label>Cuisine</label>
-            <select v-model="editForm.cuisine">
-              <option v-for="c in store.cuisineTypes" :key="c" :value="c">{{ c }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="edit-field">
-          <label>Rating</label>
-          <div class="star-rating">
-            <button
-              v-for="i in 5" :key="i"
-              class="star-btn"
-              @click="setEditRating(i)"
-              @mouseenter="hoverRating = i"
-              @mouseleave="hoverRating = 0"
-            >
-              <svg width="26" height="26" viewBox="0 0 24 24"
-                :fill="i <= (hoverRating || editForm.rating || 0) ? '#f59e0b' : 'none'"
-                :stroke="i <= (hoverRating || editForm.rating || 0) ? '#f59e0b' : 'currentColor'"
-                stroke-width="1.5">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            </button>
-            <span v-if="editForm.rating" class="rating-label">{{ editForm.rating }}/5</span>
-          </div>
-        </div>
-
-        <div class="edit-field">
-          <label>Tags</label>
-          <div class="tags-edit-wrap">
-            <div v-if="editForm.tags?.length" class="edit-tags-list">
-              <span v-for="tag in editForm.tags" :key="tag" class="edit-tag">
-                {{ tag }}
-                <button @click="removeEditTag(tag)">&times;</button>
-              </span>
-            </div>
-            <input v-model="editTagInput" type="text" placeholder="Add tag + Enter" @keyup.enter="addEditTag" />
-          </div>
-        </div>
-
-        <div class="edit-field">
-          <label>Notes</label>
-          <textarea v-model="editForm.notes" placeholder="Notes..." rows="3"></textarea>
-        </div>
-
-        <div class="edit-field">
-          <label>Website</label>
-          <input v-model="editForm.website" type="url" placeholder="https://..." />
-        </div>
+        <PlaceFormFields :model-value="editForm" @update:model-value="onEditFormUpdate" @submit="saveEdit" />
 
         <div class="edit-actions">
+          <button class="btn-cancel" @click="cancelEdit">Cancel</button>
           <button class="btn-save" @click="saveEdit">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             Save Changes
           </button>
-          <button class="btn-cancel" @click="cancelEdit">Cancel</button>
         </div>
       </div>
     </div>
   </div>
 </template>
-
 <style scoped lang="scss">
 /* ─── Preview hero image ─── */
 .preview-hero-skeleton {
@@ -1306,129 +1239,16 @@ function formatDate(ts) {
   gap: 14px;
 }
 
-.edit-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-
-  label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  input,
-  select,
-  textarea {
-    padding: 12px 14px;
-    background: var(--bg-glass-light);
-    color: var(--text-primary);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    font-size: 15px;
-    -webkit-appearance: none;
-
-    &:focus {
-      @include input-focus;
-    }
-  }
-
-  textarea {
-    resize: vertical;
-    min-height: 60px;
-  }
-
-  input::placeholder,
-  textarea::placeholder {
-    color: var(--text-muted);
-  }
-}
-
-.edit-row {
-  display: flex;
-  gap: 10px;
-
-  .edit-field { flex: 1; }
-}
-
-.star-rating {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.star-btn {
-  background: none;
-  padding: 4px;
-  color: var(--text-muted);
-  display: flex;
-
-  &:active { transform: scale(1.2); }
-}
-
-.rating-label {
-  margin-left: 10px;
-  font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.tags-edit-wrap {
-  padding: 10px 12px;
-  background: var(--bg-glass-light);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  &:focus-within {
-    @include input-focus;
-  }
-
-  input {
-    background: none;
-    border: none;
-    padding: 4px;
-    color: var(--text-primary);
-    font-size: 14px;
-
-    &:focus { box-shadow: none; }
-  }
-}
-
-.edit-tags-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.edit-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 12px;
-  background: var(--accent-light);
-  color: var(--accent);
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 500;
-
-  button {
-    background: none;
-    color: var(--accent);
-    font-size: 16px;
-    padding: 0;
-    line-height: 1;
-  }
-}
-
 .edit-actions {
   display: flex;
   gap: 8px;
   padding-top: 8px;
+}
+
+.edit-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 2px;
 }
 
 .btn-save {
